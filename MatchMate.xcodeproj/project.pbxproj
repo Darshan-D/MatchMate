@@ -33,20 +33,33 @@
 		7D61D9DD303EEFD200357B39 /* MatchMateUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MatchMateUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7D6DD11D303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMate" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Tests/Mock/MockProfileRepository.swift,
+				Tests/Presentation/MatchListViewModelTests.swift,
+			);
+			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
+		};
+		7D6DD11E303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMateTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Tests/Mock/MockProfileRepository.swift,
+				Tests/Presentation/MatchListViewModelTests.swift,
+			);
+			target = 7D61D9D2303EEFD200357B39 /* MatchMateTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7D61D9C6303EEFD100357B39 /* MatchMate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7D6DD11D303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMate" target */,
+				7D6DD11E303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMateTests" target */,
+			);
 			path = MatchMate;
-			sourceTree = "<group>";
-		};
-		7D61D9D6303EEFD200357B39 /* MatchMateTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MatchMateTests;
-			sourceTree = "<group>";
-		};
-		7D61D9E0303EEFD200357B39 /* MatchMateUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MatchMateUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -81,8 +94,6 @@
 			isa = PBXGroup;
 			children = (
 				7D61D9C6303EEFD100357B39 /* MatchMate */,
-				7D61D9D6303EEFD200357B39 /* MatchMateTests */,
-				7D61D9E0303EEFD200357B39 /* MatchMateUITests */,
 				7D61D9C5303EEFD100357B39 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -136,9 +147,6 @@
 			dependencies = (
 				7D61D9D5303EEFD200357B39 /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				7D61D9D6303EEFD200357B39 /* MatchMateTests */,
-			);
 			name = MatchMateTests;
 			packageProductDependencies = (
 			);
@@ -158,9 +166,6 @@
 			);
 			dependencies = (
 				7D61D9DF303EEFD200357B39 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				7D61D9E0303EEFD200357B39 /* MatchMateUITests */,
 			);
 			name = MatchMateUITests;
 			packageProductDependencies = (
