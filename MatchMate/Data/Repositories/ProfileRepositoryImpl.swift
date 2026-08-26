@@ -33,7 +33,7 @@ final class ProfileRepositoryImpl: ProfileRepository {
             }
         } else {
             // Check if we actually have data for this page cached offline
-            let cached = try cachedProfiles()
+            let cached = try await cachedProfiles()
             let expectedCount = page * resultsPerPage
             // If the user tries to paginate past what is locally saved while offline
             if cached.count < expectedCount && page > 1 {

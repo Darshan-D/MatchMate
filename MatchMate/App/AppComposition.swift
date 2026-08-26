@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 
 /// Composition root for protocol-based dependency injection
 enum AppComposition {
@@ -23,6 +24,21 @@ enum AppComposition {
             fetchProfiles: fetchUseCase,
             updateStatus: updateUseCase,
             repository: repo
+        )
+    }
+
+    @MainActor
+    static func makeMatchDetailViewModel(profileId: String, context: ModelContext) -> MatchDetailViewModel {
+        let remote = RandomUserRemoteDataSource(session: .shared)
+        let local = SwiftDataLocalDataSource(context: context)
+        let repo = ProfileRepositoryImpl(remote: remote, local: local, reachability: NetworkMonitor.shared)
+
+        let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: repo)
+
+        return MatchDetailViewModel(
+            profileId: profileId,
+            repository: repo,
+            updateStatus: updateUseCase
         )
     }
 }
