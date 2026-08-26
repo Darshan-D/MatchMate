@@ -37,7 +37,9 @@
 		7D6DD11D303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMate" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/Data/ProfileEntityIntegrationTests.swift,
 				Tests/Mock/MockProfileRepository.swift,
+				Tests/Presentation/MatchDetailViewModelTests.swift,
 				Tests/Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
@@ -45,7 +47,9 @@
 		7D6DD11E303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMateTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/Data/ProfileEntityIntegrationTests.swift,
 				Tests/Mock/MockProfileRepository.swift,
+				Tests/Presentation/MatchDetailViewModelTests.swift,
 				Tests/Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9D2303EEFD200357B39 /* MatchMateTests */;
