@@ -54,16 +54,20 @@ struct MatchDetailView: View {
 
                         // Preserved Async Actions
                         HStack(spacing: 20) {
-                            Button("Decline") { Task { await viewModel.decline() } }
-                                .buttonStyle(ModernActionButtonStyle(color: .pink, isSelected: profile.status == .declined))
+                            Button(profile.status == .declined ? "Declined" : "Decline") {
+                                Task { await viewModel.decline() }
+                            }
+                            .buttonStyle(ModernActionButtonStyle(color: .red, isSelected: profile.status == .declined))
 
-                            Button("Accept") { Task { await viewModel.accept() } }
-                                .buttonStyle(ModernActionButtonStyle(color: .teal, isSelected: profile.status == .accepted))
+                            Button(profile.status == .accepted ? "Accepted" : "Accept") {
+                                Task { await viewModel.accept() }
+                            }
+                            .buttonStyle(ModernActionButtonStyle(color: .green, isSelected: profile.status == .accepted))
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 10)
                     }
-                    .offset(y: -30) // Pull content up into the gradient fade
+                    .offset(y: -15) // Pull content up into the gradient fade
                 }
             } else {
                 ProgressView()
@@ -103,10 +107,12 @@ struct ModernActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.title3.weight(.bold))
-            .foregroundColor(isSelected ? .white : color)
+            // Vibrant text color when selected, neutral gray when unselected
+            .foregroundColor(isSelected ? color : .primary.opacity(0.6))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(isSelected ? color : color.opacity(0.15))
+            // Faint colored background when selected, faint gray when unselected
+            .background(isSelected ? color.opacity(0.15) : Color(uiColor: .tertiarySystemFill))
             .clipShape(Capsule())
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)

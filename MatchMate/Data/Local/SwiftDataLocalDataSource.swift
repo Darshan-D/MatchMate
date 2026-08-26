@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 final class SwiftDataLocalDataSource: LocalProfileDataSource {
     private let context: ModelContext
 

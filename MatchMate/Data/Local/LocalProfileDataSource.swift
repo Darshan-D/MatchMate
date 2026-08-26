@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 protocol LocalProfileDataSource {
     func upsert(_ profiles: [Profile], page: Int) throws
     func fetchAll() throws -> [Profile]

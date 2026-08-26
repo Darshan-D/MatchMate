@@ -8,6 +8,7 @@
 import Foundation
 @testable import MatchMate
 
+@MainActor
 final class MockProfileRepository: ProfileRepository {
     // In-memory storage acting as our local database
     var storage: [String: Profile] = [:]
@@ -35,6 +36,10 @@ final class MockProfileRepository: ProfileRepository {
                 }
             }
         } else {
+            if storage.isEmpty {
+                throw ProfileRepositoryError.network(URLError(.notConnectedToInternet))
+            }
+
             if page > 1 && storage.isEmpty {
                 throw ProfileRepositoryError.offlineNoMoreData
             }

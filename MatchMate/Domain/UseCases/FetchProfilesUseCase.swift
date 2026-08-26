@@ -9,10 +9,12 @@ import Foundation
 
 // MARK: - Fetch Profiles Use Case
 
+@MainActor
 protocol FetchProfilesUseCase {
     func execute(page: Int) async throws -> [Profile]
 }
 
+@MainActor
 struct DefaultFetchProfilesUseCase: FetchProfilesUseCase {
     let repository: ProfileRepository
 

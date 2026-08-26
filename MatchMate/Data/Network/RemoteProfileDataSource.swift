@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 protocol RemoteProfileDataSource {
     func fetchPage(_ page: Int, results: Int, seed: String) async throws -> [ProfileDTO]
 }

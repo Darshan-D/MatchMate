@@ -29,8 +29,12 @@ final class MatchListViewModel {
 
     func loadInitial() async {
         guard profiles.isEmpty else { return }
+
         isLoadingPage = true
         error = nil
+        currentPage = 1      // Reset to page 1
+        hasMorePages = true  // Resurrect pagination if it died offline
+
         do {
             profiles = try await fetchProfiles.execute(page: currentPage)
         } catch let err as ProfileRepositoryError {
@@ -39,6 +43,7 @@ final class MatchListViewModel {
         } catch {
             self.error = .persistence(error)
         }
+
         isLoadingPage = false
     }
 

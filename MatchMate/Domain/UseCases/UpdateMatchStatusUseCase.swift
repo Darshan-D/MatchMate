@@ -9,10 +9,12 @@ import Foundation
 
 // MARK: - Update Match Status Use Case
 
+@MainActor
 protocol UpdateMatchStatusUseCase {
     func execute(id: String, status: MatchStatus) async throws
 }
 
+@MainActor
 struct DefaultUpdateMatchStatusUseCase: UpdateMatchStatusUseCase {
     let repository: ProfileRepository
 

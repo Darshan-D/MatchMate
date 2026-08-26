@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 final class RandomUserRemoteDataSource: RemoteProfileDataSource {
     private let session: URLSession
 

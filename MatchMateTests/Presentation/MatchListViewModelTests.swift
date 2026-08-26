@@ -88,4 +88,21 @@ final class MatchListViewModelTests: XCTestCase {
             return
         }
     }
+
+    func testLoadInitial_OfflineWithNoCache_SurfacesNetworkError() async {
+            // Arrange
+            mockRepository.isReachable = false
+            mockRepository.storage = [:] // Guarantee empty cache
+
+            // Act
+            await viewModel.loadInitial()
+
+            // Assert
+            XCTAssertTrue(viewModel.profiles.isEmpty) // Profiles must remain empty
+
+            guard case .network = viewModel.error else {
+                XCTFail("Expected network error to trigger the OfflineEmptyStateView")
+                return
+            }
+        }
 }

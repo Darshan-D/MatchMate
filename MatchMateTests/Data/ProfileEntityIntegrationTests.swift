@@ -15,7 +15,7 @@ final class ProfileEntityIntegrationTests: XCTestCase {
     var localDataSource: SwiftDataLocalDataSource!
 
     override func setUpWithError() throws {
-        // STRICT REQUIREMENT: In-memory configuration for test isolation
+        // In-memory configuration for test isolation
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         container = try ModelContainer(for: ProfileEntity.self, configurations: config)
         localDataSource = SwiftDataLocalDataSource(context: container.mainContext)

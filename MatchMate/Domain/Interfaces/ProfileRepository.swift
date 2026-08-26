@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 protocol ProfileRepository {
     /// Fetches a page from remote (if reachable), merges + persists to local store,
     /// returns the full up-to-date local list (cache is source of truth for reads).

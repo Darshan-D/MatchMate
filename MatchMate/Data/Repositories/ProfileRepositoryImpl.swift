@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 final class ProfileRepositoryImpl: ProfileRepository {
     private let remote: RemoteProfileDataSource
     private let local: LocalProfileDataSource
@@ -22,26 +23,32 @@ final class ProfileRepositoryImpl: ProfileRepository {
     }
 
     func loadPage(_ page: Int) async throws -> [Profile] {
-        if reachability.isConnected {
+        do {
+            // 1. ALWAYS attempt the network request first.
+            // URLSession handles immediate connection restoration better than NWPathMonitor.
             let dtos = try await remote.fetchPage(page, results: resultsPerPage, seed: apiSeed)
             let domainProfiles = dtos.map { $0.toDomain() }
 
-            do {
-                try local.upsert(domainProfiles, page: page)
-            } catch {
-                throw ProfileRepositoryError.persistence(error)
-            }
-        } else {
-            // Check if we actually have data for this page cached offline
+            try local.upsert(domainProfiles, page: page)
+
+        } catch {
+            // 2. If the network request fails (or times out because you are actually offline),
+            // we catch the error and fallback to the cache.
             let cached = try await cachedProfiles()
+
+            // Fully offline + no cache on first launch
+            if cached.isEmpty {
+                throw ProfileRepositoryError.network(URLError(.notConnectedToInternet))
+            }
+
+            // Trying to paginate past what is saved offline
             let expectedCount = page * resultsPerPage
-            // If the user tries to paginate past what is locally saved while offline
             if cached.count < expectedCount && page > 1 {
                 throw ProfileRepositoryError.offlineNoMoreData
             }
         }
 
-        // The cache is always the source of truth for reads
+        // 3. Always return the local cache as the source of truth
         return try await cachedProfiles()
     }
 

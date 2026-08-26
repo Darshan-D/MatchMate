@@ -15,34 +15,47 @@ struct MatchListView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 LinearGradient(
-                    colors: [Color.pink.opacity(0.15), Color.pink.opacity(0.4)],
+                    colors: [Color.yellow.opacity(0.15), Color.yellow.opacity(0.4)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
 
-                ScrollView {
-                    LazyVStack(spacing: 20) {
-                        ForEach(viewModel.profiles) { profile in
-                            NavigationLink(value: profile.id) {
-                                MatchCardView(profile: profile) {
-                                    Task { await viewModel.accept(profile.id) }
-                                } onDecline: {
-                                    Task { await viewModel.decline(profile.id) }
+                if viewModel.profiles.isEmpty && viewModel.error != nil {
+                    OfflineEmptyStateView {
+                        Task { await viewModel.loadInitial() }
+                    }
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 20) {
+                            ForEach(viewModel.profiles) { profile in
+                                NavigationLink(value: profile.id) {
+                                    MatchCardView(profile: profile) {
+                                        Task { await viewModel.accept(profile.id) }
+                                    } onDecline: {
+                                        Task { await viewModel.decline(profile.id) }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .task {
+                                    // Strictly preserved pagination trigger
+                                    await viewModel.loadNextPageIfNeeded(currentItem: profile)
                                 }
                             }
-                            .buttonStyle(.plain)
-                            .task {
-                                // Strictly preserved pagination trigger
-                                await viewModel.loadNextPageIfNeeded(currentItem: profile)
-                            }
                         }
+                        .padding()
                     }
-                    .padding()
-                }
-                .onAppear {
-                    // Guarantees list and detail never disagree
-                    Task { await viewModel.refreshFromCache() }
+                    .onAppear {
+                        // Guarantees list and detail never disagree
+                        Task { await viewModel.refreshFromCache() }
+                    }
+
+                    if let error = viewModel.error {
+                        ErrorBannerView(error: error)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .animation(.spring(), value: viewModel.error != nil)
+                            .zIndex(1)
+                    }
                 }
 
                 if viewModel.isLoadingPage && viewModel.profiles.isEmpty {
@@ -54,13 +67,6 @@ struct MatchListView: View {
                         .background(Material.ultraThin)
                         .clipShape(Capsule())
                         .padding(.bottom, 20)
-                }
-
-                if let error = viewModel.error {
-                    ErrorBannerView(error: error)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .animation(.spring(), value: viewModel.error != nil)
-                        .zIndex(1)
                 }
             }
             .navigationTitle("Discover")
