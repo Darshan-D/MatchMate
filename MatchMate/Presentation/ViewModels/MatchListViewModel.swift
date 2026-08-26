@@ -54,9 +54,10 @@ final class MatchListViewModel {
         currentPage += 1
         do {
             profiles = try await fetchProfiles.execute(page: currentPage)
+            self.error = nil
         } catch ProfileRepositoryError.offlineNoMoreData {
-            hasMorePages = false
             self.error = .offlineNoMoreData
+            currentPage -= 1
         } catch let err as ProfileRepositoryError {
             self.error = err
             currentPage -= 1 // Revert page increment on failure

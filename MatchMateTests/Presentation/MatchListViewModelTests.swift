@@ -90,19 +90,52 @@ final class MatchListViewModelTests: XCTestCase {
     }
 
     func testLoadInitial_OfflineWithNoCache_SurfacesNetworkError() async {
-            // Arrange
-            mockRepository.isReachable = false
-            mockRepository.storage = [:] // Guarantee empty cache
+        // Arrange
+        mockRepository.isReachable = false
+        mockRepository.storage = [:] // Guarantee empty cache
 
-            // Act
-            await viewModel.loadInitial()
+        // Act
+        await viewModel.loadInitial()
 
-            // Assert
-            XCTAssertTrue(viewModel.profiles.isEmpty) // Profiles must remain empty
+        // Assert
+        XCTAssertTrue(viewModel.profiles.isEmpty) // Profiles must remain empty
 
-            guard case .network = viewModel.error else {
-                XCTFail("Expected network error to trigger the OfflineEmptyStateView")
-                return
-            }
+        guard case .network = viewModel.error else {
+            XCTFail("Expected network error to trigger the OfflineEmptyStateView")
+            return
         }
+    }
+
+    func testDecline_OptimisticallyUpdatesUI_ThenPersists() async {
+        // Arrange
+        let profile = Profile(id: "1", firstName: "John", lastName: "Doe", age: 30, city: "NY", state: "NY", country: "US", email: "test", phone: "123", nationality: "US", registeredDate: Date(), thumbnailURL: nil, largePhotoURL: nil, status: .pending)
+        mockRepository.storage["1"] = profile
+        viewModel.profiles = [profile] // Mock pre-loaded state
+
+        // Act
+        await viewModel.decline("1")
+
+        // Assert - ViewModel state is updated (Optimistic UI)
+        XCTAssertEqual(viewModel.profiles.first?.status, .declined)
+        // Assert - Repository state is updated (Persistence)
+        XCTAssertEqual(mockRepository.storage["1"]?.status, .declined)
+    }
+
+    func testUpdateStatus_Failure_RollsBackToPreviousState() async {
+        // Arrange
+        let profile = Profile(id: "1", firstName: "John", lastName: "Doe", age: 30, city: "NY", state: "NY", country: "US", email: "test", phone: "123", nationality: "US", registeredDate: Date(), thumbnailURL: nil, largePhotoURL: nil, status: .pending)
+        mockRepository.storage["1"] = profile
+        viewModel.profiles = [profile] // Mock pre-loaded state
+
+        // Force the persistence layer to fail
+        mockRepository.shouldThrowError = .persistence(NSError(domain: "Test", code: 1))
+
+        // Act
+        await viewModel.accept("1")
+
+        // Assert - UI State rolls back to pending instead of getting stuck on accepted
+        XCTAssertEqual(viewModel.profiles.first?.status, .pending)
+        // Assert - Error surfaced to be displayed in the ErrorBannerView
+        XCTAssertNotNil(viewModel.error)
+    }
 }

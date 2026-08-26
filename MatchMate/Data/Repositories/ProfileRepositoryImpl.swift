@@ -11,15 +11,13 @@ import Foundation
 final class ProfileRepositoryImpl: ProfileRepository {
     private let remote: RemoteProfileDataSource
     private let local: LocalProfileDataSource
-    private let reachability: Reachable
 
     private let resultsPerPage = 10
     private let apiSeed = "matchmate" // Stable seed as required by assignment
 
-    init(remote: RemoteProfileDataSource, local: LocalProfileDataSource, reachability: Reachable) {
+    init(remote: RemoteProfileDataSource, local: LocalProfileDataSource) {
         self.remote = remote
         self.local = local
-        self.reachability = reachability
     }
 
     func loadPage(_ page: Int) async throws -> [Profile] {

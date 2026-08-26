@@ -52,20 +52,51 @@ struct MatchDetailView: View {
                         }
                         .padding(.horizontal)
 
-                        // Preserved Async Actions
+                        // Dynamic Action Buttons
                         HStack(spacing: 20) {
-                            Button(profile.status == .declined ? "Declined" : "Decline") {
-                                Task { await viewModel.decline() }
-                            }
-                            .buttonStyle(ModernActionButtonStyle(color: .red, isSelected: profile.status == .declined))
+                            if profile.status == .accepted {
+                                // Shrink 'Decline' to a small "X" on the left
+                                Button {
+                                    Task { await viewModel.decline() }
+                                } label: {
+                                    Image(systemName: "xmark")
+                                }
+                                .buttonStyle(DetailIconButtonStyle(color: .red, gradient: [.pink, .red]))
 
-                            Button(profile.status == .accepted ? "Accepted" : "Accept") {
-                                Task { await viewModel.accept() }
+                                // Expand 'Accept' to fill the rest
+                                Button("Accepted") {
+                                    Task { await viewModel.accept() }
+                                }
+                                .buttonStyle(ModernActionButtonStyle(color: .teal, isSelected: true))
+
+                            } else if profile.status == .declined {
+                                // Expand 'Decline' to fill the rest
+                                Button("Declined") {
+                                    Task { await viewModel.decline() }
+                                }
+                                .buttonStyle(ModernActionButtonStyle(color: .pink, isSelected: true))
+
+                                // Shrink 'Accept' to a small "heart" on the right
+                                Button {
+                                    Task { await viewModel.accept() }
+                                } label: {
+                                    Image(systemName: "heart.fill")
+                                }
+                                .buttonStyle(DetailIconButtonStyle(color: .green, gradient: [.teal, .green]))
+
+                            } else {
+                                // Pending state: both buttons share space equally
+                                Button("Decline") { Task { await viewModel.decline() } }
+                                    .buttonStyle(ModernActionButtonStyle(color: .pink, isSelected: false))
+
+                                Button("Accept") { Task { await viewModel.accept() } }
+                                    .buttonStyle(ModernActionButtonStyle(color: .teal, isSelected: false))
                             }
-                            .buttonStyle(ModernActionButtonStyle(color: .green, isSelected: profile.status == .accepted))
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 10)
+                        // This animates the layout transition smoothly when the status changes
+                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: profile.status)
                     }
                     .offset(y: -15) // Pull content up into the gradient fade
                 }
@@ -97,24 +128,5 @@ struct MatchDetailView: View {
         .padding()
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-struct ModernActionButtonStyle: ButtonStyle {
-    let color: Color
-    let isSelected: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.title3.weight(.bold))
-            // Vibrant text color when selected, neutral gray when unselected
-            .foregroundColor(isSelected ? color : .primary.opacity(0.6))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            // Faint colored background when selected, faint gray when unselected
-            .background(isSelected ? color.opacity(0.15) : Color(uiColor: .tertiarySystemFill))
-            .clipShape(Capsule())
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }

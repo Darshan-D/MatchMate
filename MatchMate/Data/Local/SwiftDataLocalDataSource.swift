@@ -22,13 +22,21 @@ final class SwiftDataLocalDataSource: LocalProfileDataSource {
             let descriptor = FetchDescriptor<ProfileEntity>(predicate: #Predicate { $0.id == id })
 
             if let existing = try context.fetch(descriptor).first {
-                // Update properties but PRESERVE the existing status decision
                 existing.firstName = profile.firstName
                 existing.lastName = profile.lastName
                 existing.age = profile.age
                 existing.city = profile.city
-                // ... update other metadata fields as necessary
+                existing.state = profile.state
+                existing.country = profile.country
+                existing.email = profile.email
+                existing.phone = profile.phone
+                existing.nationality = profile.nationality
+                existing.registeredDate = profile.registeredDate
+                existing.thumbnailURLString = profile.thumbnailURL?.absoluteString
+                existing.largePhotoURLString = profile.largePhotoURL?.absoluteString
                 existing.pageFetched = page
+
+                // Note: We deliberately DO NOT update `status` to preserve local decisions.
             } else {
                 // Insert new profile
                 let newEntity = ProfileEntity(from: profile, page: page)

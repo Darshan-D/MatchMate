@@ -15,7 +15,7 @@ enum AppComposition {
         // These concrete types will be implemented in the Data layer (Phase 2)
         let remote = RandomUserRemoteDataSource(session: .shared)
         let local = SwiftDataLocalDataSource(context: context)
-        let repo = ProfileRepositoryImpl(remote: remote, local: local, reachability: NetworkMonitor.shared)
+        let repo = ProfileRepositoryImpl(remote: remote, local: local)
 
         let fetchUseCase = DefaultFetchProfilesUseCase(repository: repo)
         let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: repo)
@@ -31,7 +31,7 @@ enum AppComposition {
     static func makeMatchDetailViewModel(profileId: String, context: ModelContext) -> MatchDetailViewModel {
         let remote = RandomUserRemoteDataSource(session: .shared)
         let local = SwiftDataLocalDataSource(context: context)
-        let repo = ProfileRepositoryImpl(remote: remote, local: local, reachability: NetworkMonitor.shared)
+        let repo = ProfileRepositoryImpl(remote: remote, local: local)
 
         let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: repo)
 
