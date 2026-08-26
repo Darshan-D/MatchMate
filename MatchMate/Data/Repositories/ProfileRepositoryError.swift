@@ -7,9 +7,9 @@
 
 import Foundation
 
-protocol LocalProfileDataSource {
-    func upsert(_ profiles: [Profile], page: Int) throws
-    func fetchAll() throws -> [Profile]
-    func fetch(id: String) throws -> Profile?
-    func updateStatus(id: String, status: MatchStatus) throws
+enum ProfileRepositoryError: Error {
+    case network(URLError)
+    case decoding(Error)
+    case persistence(Error)
+    case offlineNoMoreData
 }
