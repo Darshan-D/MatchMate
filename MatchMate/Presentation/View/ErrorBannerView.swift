@@ -20,15 +20,23 @@ struct ErrorBannerView: View {
     }
 
     var body: some View {
-        Text(errorMessage)
-            .font(.subheadline)
-            .fontWeight(.medium)
-            .foregroundColor(.white)
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.red.opacity(0.9))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title3)
+
+            Text(errorMessage)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+        .foregroundColor(.white)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .background(
+            LinearGradient(colors: [.red, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+        .clipShape(Capsule())
+        .shadow(color: .red.opacity(0.3), radius: 8, x: 0, y: 4)
+        .padding(.horizontal)
+        .padding(.bottom, 8)
     }
 }

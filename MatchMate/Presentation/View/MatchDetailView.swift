@@ -9,83 +9,106 @@ import SwiftUI
 import Kingfisher
 
 struct MatchDetailView: View {
-    // Injected via composition root/factory in actual app
     @State var viewModel: MatchDetailViewModel
 
     var body: some View {
         ScrollView {
             if let profile = viewModel.profile {
-                VStack(spacing: 24) {
-                    KFImage(profile.largePhotoURL)
-                        .placeholder { ProgressView() }
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 350)
-                        .clipped()
+                VStack(spacing: 0) {
+                    // Hero Image with Gradient Fade
+                    ZStack(alignment: .bottom) {
+                        KFImage(profile.largePhotoURL)
+                            .placeholder { ProgressView() }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 400)
+                            .clipped()
 
-                    VStack(spacing: 16) {
-                        Text("\(profile.firstName) \(profile.lastName), \(profile.age)")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-
-                        detailRow(icon: "envelope.fill", text: profile.email)
-                        detailRow(icon: "phone.fill", text: profile.phone)
-                        detailRow(icon: "mappin.and.ellipse", text: "\(profile.city), \(profile.country)")
-                        detailRow(icon: "calendar", text: "Registered: \(profile.registeredDate.formatted(date: .abbreviated, time: .omitted))")
+                        LinearGradient(
+                            colors: [.clear, Color(.systemBackground)],
+                            startPoint: .center,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 150)
                     }
-                    .padding(.horizontal)
 
-                    HStack(spacing: 30) {
-                        Button("Decline") { Task { await viewModel.decline() } }
-                            .buttonStyle(ActionButtonStyle(color: .red, isSelected: profile.status == .declined))
+                    VStack(spacing: 24) {
+                        VStack(spacing: 8) {
+                            Text("\(profile.firstName) \(profile.lastName), \(profile.age)")
+                                .font(.system(.largeTitle, design: .rounded))
+                                .fontWeight(.heavy)
 
-                        Button("Accept") { Task { await viewModel.accept() } }
-                            .buttonStyle(ActionButtonStyle(color: .green, isSelected: profile.status == .accepted))
+                            Text("\(profile.city), \(profile.country)")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                        }
+
+                        // Modern Info Cards
+                        VStack(spacing: 12) {
+                            detailRow(icon: "envelope.fill", color: .indigo, text: profile.email)
+                            detailRow(icon: "phone.fill", color: .green, text: profile.phone)
+                            detailRow(icon: "calendar.badge.clock", color: .orange, text: "Joined \(profile.registeredDate.formatted(date: .abbreviated, time: .omitted))")
+                        }
+                        .padding(.horizontal)
+
+                        // Preserved Async Actions
+                        HStack(spacing: 20) {
+                            Button("Decline") { Task { await viewModel.decline() } }
+                                .buttonStyle(ModernActionButtonStyle(color: .pink, isSelected: profile.status == .declined))
+
+                            Button("Accept") { Task { await viewModel.accept() } }
+                                .buttonStyle(ModernActionButtonStyle(color: .teal, isSelected: profile.status == .accepted))
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 10)
                     }
-                    .padding(.top, 20)
+                    .offset(y: -30) // Pull content up into the gradient fade
                 }
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .ignoresSafeArea(edges: .top)
         .task {
             await viewModel.loadProfile()
         }
     }
 
-    private func detailRow(icon: String, text: String) -> some View {
-        HStack(spacing: 12) {
+    private func detailRow(icon: String, color: Color, text: String) -> some View {
+        HStack(spacing: 16) {
             Image(systemName: icon)
-                .foregroundColor(.gray)
-                .frame(width: 24)
+                .font(.title3)
+                .foregroundColor(color)
+                .frame(width: 40, height: 40)
+                .background(color.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
             Text(text)
                 .font(.body)
+                .fontWeight(.medium)
             Spacer()
         }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
-// Custom button style for detail view actions
-struct ActionButtonStyle: ButtonStyle {
+struct ModernActionButtonStyle: ButtonStyle {
     let color: Color
     let isSelected: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.title3.weight(.bold))
             .foregroundColor(isSelected ? .white : color)
             .frame(maxWidth: .infinity)
-            .padding()
-            .background(isSelected ? color : color.opacity(0.1))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(color, lineWidth: isSelected ? 0 : 2)
-            )
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(.easeOut, value: configuration.isPressed)
+            .padding(.vertical, 16)
+            .background(isSelected ? color : color.opacity(0.15))
+            .clipShape(Capsule())
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }

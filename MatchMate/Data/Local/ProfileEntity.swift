@@ -32,41 +32,35 @@ final class ProfileEntity {
         set { statusRaw = newValue.rawValue }
     }
 
-    init(from profile: Profile, page: Int) {
-        self.id = profile.id
-        self.firstName = profile.firstName
-        self.lastName = profile.lastName
-        self.age = profile.age
-        self.city = profile.city
-        self.state = profile.state
-        self.country = profile.country
-        self.email = profile.email
-        self.phone = profile.phone
-        self.nationality = profile.nationality
-        self.registeredDate = profile.registeredDate
-        self.thumbnailURLString = profile.thumbnailURL?.absoluteString
-        self.largePhotoURLString = profile.largePhotoURL?.absoluteString
-        self.statusRaw = profile.status.rawValue
-        self.pageFetched = page
-    }
-
-    // Maps Entity back to Domain
-    func toDomain() -> Profile {
-        Profile(
-            id: id,
-            firstName: firstName,
-            lastName: lastName,
-            age: age,
-            city: city,
-            state: state,
-            country: country,
-            email: email,
-            phone: phone,
-            nationality: nationality,
-            registeredDate: registeredDate,
-            thumbnailURL: thumbnailURLString.flatMap { URL(string: $0) },
-            largePhotoURL: largePhotoURLString.flatMap { URL(string: $0) },
-            status: status
-        )
+    init(id: String,
+         firstName: String,
+         lastName: String,
+         age: Int,
+         city: String,
+         state: String,
+         country: String,
+         email: String,
+         phone: String,
+         nationality: String,
+         registeredDate: Date,
+         thumbnailURLString: String?,
+         largePhotoURLString: String?,
+         statusRaw: String,
+         pageFetched: Int) {
+        self.id = id
+        self.firstName = firstName
+        self.lastName = lastName
+        self.age = age
+        self.city = city
+        self.state = state
+        self.country = country
+        self.email = email
+        self.phone = phone
+        self.nationality = nationality
+        self.registeredDate = registeredDate
+        self.thumbnailURLString = thumbnailURLString
+        self.largePhotoURLString = largePhotoURLString
+        self.statusRaw = statusRaw
+        self.pageFetched = pageFetched
     }
 }

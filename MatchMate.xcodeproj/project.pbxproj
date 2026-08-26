@@ -34,23 +34,23 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7D6DD11D303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMate" target */ = {
+		7D6DD136303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMate" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Tests/Data/ProfileEntityIntegrationTests.swift,
-				Tests/Mock/MockProfileRepository.swift,
-				Tests/Presentation/MatchDetailViewModelTests.swift,
-				Tests/Presentation/MatchListViewModelTests.swift,
+				Data/ProfileEntityIntegrationTests.swift,
+				Mock/MockProfileRepository.swift,
+				Presentation/MatchDetailViewModelTests.swift,
+				Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
 		};
-		7D6DD11E303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMateTests" target */ = {
+		7D6DD137303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMateTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Tests/Data/ProfileEntityIntegrationTests.swift,
-				Tests/Mock/MockProfileRepository.swift,
-				Tests/Presentation/MatchDetailViewModelTests.swift,
-				Tests/Presentation/MatchListViewModelTests.swift,
+				Data/ProfileEntityIntegrationTests.swift,
+				Mock/MockProfileRepository.swift,
+				Presentation/MatchDetailViewModelTests.swift,
+				Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9D2303EEFD200357B39 /* MatchMateTests */;
 		};
@@ -59,11 +59,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7D61D9C6303EEFD100357B39 /* MatchMate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				7D6DD11D303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMate" target */,
-				7D6DD11E303F0AA300498F6C /* Exceptions for "MatchMate" folder in "MatchMateTests" target */,
-			);
 			path = MatchMate;
+			sourceTree = "<group>";
+		};
+		7D6DD131303F151C00498F6C /* MatchMateTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7D6DD136303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMate" target */,
+				7D6DD137303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMateTests" target */,
+			);
+			path = MatchMateTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -97,6 +102,7 @@
 		7D61D9BB303EEFD100357B39 = {
 			isa = PBXGroup;
 			children = (
+				7D6DD131303F151C00498F6C /* MatchMateTests */,
 				7D61D9C6303EEFD100357B39 /* MatchMate */,
 				7D61D9C5303EEFD100357B39 /* Products */,
 			);
@@ -129,6 +135,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7D61D9C6303EEFD100357B39 /* MatchMate */,
+				7D6DD131303F151C00498F6C /* MatchMateTests */,
 			);
 			name = MatchMate;
 			packageProductDependencies = (

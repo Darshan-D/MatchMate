@@ -48,7 +48,6 @@ final class MatchDetailViewModel {
 
         do {
             try await updateStatus.execute(id: profileId, status: status)
-            NotificationCenter.default.post(name: .matchStatusDidUpdate, object: nil)
         } catch {
             // Rollback
             currentProfile.status = oldStatus

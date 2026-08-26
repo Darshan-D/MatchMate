@@ -25,15 +25,6 @@ final class MatchListViewModel {
         self.fetchProfiles = fetchProfiles
         self.updateStatus = updateStatus
         self.repository = repository
-
-        // Shared Observation Mechanism: Listen for SwiftData saves to keep UI in sync
-        NotificationCenter.default.addObserver(
-            forName: .matchStatusDidUpdate,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { await self?.refreshFromCache() }
-        }
     }
 
     func loadInitial() async {
@@ -98,7 +89,7 @@ final class MatchListViewModel {
     }
 
     @MainActor
-    private func refreshFromCache() async {
+    internal func refreshFromCache() async {
         do {
             let cached = try await repository.cachedProfiles()
             // Only update if there's a difference to avoid unnecessary UI redraws

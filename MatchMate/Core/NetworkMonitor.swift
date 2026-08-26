@@ -8,11 +8,6 @@
 import Network
 import Observation
 
-/// Protocol allowing us to mock network connectivity in our view model tests.
-protocol Reachable {
-    var isConnected: Bool { get }
-}
-
 @Observable
 final class NetworkMonitor: Reachable {
     static let shared = NetworkMonitor()

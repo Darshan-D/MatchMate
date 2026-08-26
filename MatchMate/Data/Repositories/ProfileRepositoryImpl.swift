@@ -24,7 +24,7 @@ final class ProfileRepositoryImpl: ProfileRepository {
     func loadPage(_ page: Int) async throws -> [Profile] {
         if reachability.isConnected {
             let dtos = try await remote.fetchPage(page, results: resultsPerPage, seed: apiSeed)
-            let domainProfiles = dtos.compactMap(mapToDomain)
+            let domainProfiles = dtos.map { $0.toDomain() }
 
             do {
                 try local.upsert(domainProfiles, page: page)
@@ -67,30 +67,5 @@ final class ProfileRepositoryImpl: ProfileRepository {
         } catch {
             throw ProfileRepositoryError.persistence(error)
         }
-    }
-
-    // Helper to map DTO -> Domain Entity
-    private func mapToDomain(_ dto: ProfileDTO) -> Profile? {
-        let formatter = ISO8601DateFormatter()
-        // RandomUser API sometimes appends fraction seconds; adjusting if needed
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let date = formatter.date(from: dto.registered.date) ?? Date()
-
-        return Profile(
-            id: dto.login.uuid,
-            firstName: dto.name.first,
-            lastName: dto.name.last,
-            age: dto.dob.age,
-            city: dto.location.city,
-            state: dto.location.state,
-            country: dto.location.country,
-            email: dto.email,
-            phone: dto.phone,
-            nationality: dto.nat,
-            registeredDate: date,
-            thumbnailURL: URL(string: dto.picture.medium),
-            largePhotoURL: URL(string: dto.picture.large),
-            status: .pending // Defaults to pending. Local db upsert preserves true status.
-        )
     }
 }
