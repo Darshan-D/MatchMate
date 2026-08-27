@@ -22,32 +22,47 @@ final class ProfileRepositoryImpl: ProfileRepository {
 
     func loadPage(_ page: Int) async throws -> [Profile] {
         do {
-            // 1. ALWAYS attempt the network request first.
-            // URLSession handles immediate connection restoration better than NWPathMonitor.
+            // We ALWAYS attempt the network request first.
             let dtos = try await remote.fetchPage(page, results: resultsPerPage, seed: apiSeed)
             let domainProfiles = dtos.map { $0.toDomain() }
 
             try local.upsert(domainProfiles, page: page)
 
+        } catch let error as ProfileRepositoryError {
+            if case .network(let urlError) = error {
+                print("⚠️ [WARN][ProfileRepositoryImpl] Network error fetching page \(page): \(urlError.localizedDescription). Attempting offline fallback...")
+                return try await handleOfflineFallback(page: page)
+            } else {
+                print("❌ [ERROR][ProfileRepositoryImpl] Repository error on page \(page): \(error)")
+                throw error
+            }
         } catch {
-            // 2. If the network request fails (or times out because you are actually offline),
-            // we catch the error and fallback to the cache.
-            let cached = try await cachedProfiles()
-
-            // Fully offline + no cache on first launch
-            if cached.isEmpty {
-                throw ProfileRepositoryError.network(URLError(.notConnectedToInternet))
-            }
-
-            // Trying to paginate past what is saved offline
-            let expectedCount = page * resultsPerPage
-            if cached.count < expectedCount && page > 1 {
-                throw ProfileRepositoryError.offlineNoMoreData
-            }
+            print("❌ [ERROR][ProfileRepositoryImpl] Unexpected persistence error on page \(page): \(error)")
+            throw ProfileRepositoryError.persistence(error)
         }
 
-        // 3. Always return the local cache as the source of truth
+        // Always return the local cache as the source of truth for successful fetches
         return try await cachedProfiles()
+    }
+
+    private func handleOfflineFallback(page: Int) async throws -> [Profile] {
+        let cached = try await cachedProfiles()
+
+        // Fully offline + no cache on first launch
+        if cached.isEmpty {
+            print("❌ [ERROR][ProfileRepositoryImpl] Offline fallback failed: No cached profiles available for first launch.")
+            throw ProfileRepositoryError.network(URLError(.notConnectedToInternet))
+        }
+
+        // Trying to paginate past what is saved offline
+        let expectedCount = page * resultsPerPage
+        if cached.count < expectedCount && page > 1 {
+            print("⚠️ [WARN][ProfileRepositoryImpl] Offline fallback stopped: Tried to load page \(page) but only \(cached.count) profiles are cached offline.")
+            throw ProfileRepositoryError.offlineNoMoreData
+        }
+
+        print("✅ [SUCCESS][ProfileRepositoryImpl] Offline fallback successful: Serving \(cached.count) profiles from local cache.")
+        return cached
     }
 
     func cachedProfiles() async throws -> [Profile] {
@@ -69,6 +84,15 @@ final class ProfileRepositoryImpl: ProfileRepository {
     func profile(id: String) async throws -> Profile? {
         do {
             return try local.fetch(id: id)
+        } catch {
+            throw ProfileRepositoryError.persistence(error)
+        }
+    }
+
+    func resumePage() async throws -> Int {
+        do {
+            let highest = try local.highestFetchedPage()
+            return highest == 0 ? 1 : highest   // no cache yet → start at 1
         } catch {
             throw ProfileRepositoryError.persistence(error)
         }

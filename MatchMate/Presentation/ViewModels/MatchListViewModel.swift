@@ -15,31 +15,43 @@ final class MatchListViewModel {
     var error: ProfileRepositoryError?
 
     private let fetchProfiles: FetchProfilesUseCase
+    private let getCachedProfiles: GetCachedProfilesUseCase
     private let updateStatus: UpdateMatchStatusUseCase
-    private let repository: ProfileRepository
+    private let getResumePage: GetResumePageUseCase
+
 
     private var currentPage: Int = 1
-    private var hasMorePages: Bool = true
 
-    init(fetchProfiles: FetchProfilesUseCase, updateStatus: UpdateMatchStatusUseCase, repository: ProfileRepository) {
+    init(fetchProfiles: FetchProfilesUseCase,
+         getCachedProfiles: GetCachedProfilesUseCase,
+         updateStatus: UpdateMatchStatusUseCase,
+         getResumePage: GetResumePageUseCase) {
         self.fetchProfiles = fetchProfiles
+        self.getCachedProfiles = getCachedProfiles
         self.updateStatus = updateStatus
-        self.repository = repository
+        self.getResumePage = getResumePage
     }
 
     func loadInitial() async {
         guard profiles.isEmpty else { return }
-
         isLoadingPage = true
         error = nil
-        currentPage = 1      // Reset to page 1
-        hasMorePages = true  // Resurrect pagination if it died offline
 
         do {
-            profiles = try await fetchProfiles.execute(page: currentPage)
+            let cached = try await getCachedProfiles.execute()
+
+            if cached.isEmpty {
+                // True first launch — nothing on disk, must go to network.
+                currentPage = 1
+                profiles = try await fetchProfiles.execute(page: currentPage)
+            } else {
+                // Cache is the source of truth — show it immediately, no network needed.
+                profiles = cached
+                currentPage = try await getResumePage.execute()
+            }
         } catch let err as ProfileRepositoryError {
             self.error = err
-            await refreshFromCache() // Fallback to offline cache
+            if profiles.isEmpty { await refreshFromCache() }
         } catch {
             self.error = .persistence(error)
         }
@@ -48,7 +60,7 @@ final class MatchListViewModel {
     }
 
     func loadNextPageIfNeeded(currentItem: Profile) async {
-        guard !isLoadingPage, hasMorePages, let lastItem = profiles.last, currentItem.id == lastItem.id else { return }
+        guard !isLoadingPage, let lastItem = profiles.last, currentItem.id == lastItem.id else { return }
 
         isLoadingPage = true
         currentPage += 1
@@ -86,7 +98,7 @@ final class MatchListViewModel {
         // 3. Persist to SwiftData
         do {
             try await updateStatus.execute(id: id, status: newStatus)
-            // Success: ModelContext.didSaveNotification will fire and ensure sync
+            self.error = nil
         } catch {
             // 4. Rollback on failure
             profiles[index].status = oldStatus
@@ -97,13 +109,13 @@ final class MatchListViewModel {
     @MainActor
     internal func refreshFromCache() async {
         do {
-            let cached = try await repository.cachedProfiles()
+            let cached = try await getCachedProfiles.execute()
             // Only update if there's a difference to avoid unnecessary UI redraws
             if self.profiles != cached {
                 self.profiles = cached
             }
         } catch {
-            print("Failed to sync from local cache: \(error)")
+            print("❌ [ERROR][MatchListViewModel] Failed to sync from local cache: \(error)")
         }
     }
 }

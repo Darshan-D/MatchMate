@@ -21,4 +21,7 @@ protocol ProfileRepository {
 
     /// Fetches a single profile for the detail screen.
     func profile(id: String) async throws -> Profile?
+
+    /// Returns next page to fetch
+    func resumePage() async throws -> Int
 }

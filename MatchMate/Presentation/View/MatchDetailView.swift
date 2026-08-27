@@ -95,7 +95,6 @@ struct MatchDetailView: View {
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 10)
-                        // This animates the layout transition smoothly when the status changes
                         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: profile.status)
                     }
                     .offset(y: -15) // Pull content up into the gradient fade

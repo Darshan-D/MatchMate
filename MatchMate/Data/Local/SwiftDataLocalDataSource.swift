@@ -63,4 +63,12 @@ final class SwiftDataLocalDataSource: LocalProfileDataSource {
             try context.save()
         }
     }
+
+    func highestFetchedPage() throws -> Int {
+        var descriptor = FetchDescriptor<ProfileEntity>(
+            sortBy: [SortDescriptor(\.pageFetched, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first?.pageFetched ?? 0
+    }
 }

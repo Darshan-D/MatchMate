@@ -31,5 +31,5 @@ struct LoginDTO: Decodable { let uuid: String }
 struct NameDTO: Decodable { let first: String; let last: String }
 struct DobDTO: Decodable { let age: Int }
 struct LocationDTO: Decodable { let city: String; let state: String; let country: String }
-struct RegisteredDTO: Decodable { let date: String } // Stored as ISO8601 string
+struct RegisteredDTO: Decodable { let date: String }
 struct PictureDTO: Decodable { let large: String; let medium: String }

@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SwiftData
 
 @MainActor
 final class RandomUserRemoteDataSource: RemoteProfileDataSource {
@@ -25,6 +24,7 @@ final class RandomUserRemoteDataSource: RemoteProfileDataSource {
         ]
 
         guard let url = components.url else {
+            print("❌ [ERROR][RandomUserRemoteDataSource] Remote error: Invalid URL components.")
             throw URLError(.badURL)
         }
 
@@ -32,10 +32,15 @@ final class RandomUserRemoteDataSource: RemoteProfileDataSource {
             let (data, _) = try await session.data(from: url)
             let decoder = JSONDecoder()
             let response = try decoder.decode(RandomUserResponse.self, from: data)
+
+            print("✅ [SUCCESS][RandomUserRemoteDataSource] Remote success: Fetched and decoded page \(page) (\(response.results.count) results).")
             return response.results
+
         } catch let error as URLError {
+            print("⚠️ [WARN][RandomUserRemoteDataSource] Remote network error on page \(page): \(error.localizedDescription)")
             throw ProfileRepositoryError.network(error)
         } catch {
+            print("❌ [ERROR][RandomUserRemoteDataSource] Remote decoding error on page \(page): \(error)")
             throw ProfileRepositoryError.decoding(error)
         }
     }

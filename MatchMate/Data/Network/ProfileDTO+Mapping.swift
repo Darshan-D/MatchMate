@@ -11,7 +11,14 @@ extension ProfileDTO {
     func toDomain() -> Profile {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let date = formatter.date(from: self.registered.date) ?? Date()
+
+        let parsedDate: Date
+        if let validDate = formatter.date(from: self.registered.date) {
+            parsedDate = validDate
+        } else {
+            print("⚠️ [WARN][ProfileDTO] Data Drift Warning: Failed to parse registered date string '\(self.registered.date)'. Defaulting to current date.")
+            parsedDate = Date()
+        }
 
         return Profile(
             id: self.login.uuid,
@@ -24,7 +31,7 @@ extension ProfileDTO {
             email: self.email,
             phone: self.phone,
             nationality: self.nat,
-            registeredDate: date,
+            registeredDate: parsedDate,
             thumbnailURL: URL(string: self.picture.medium),
             largePhotoURL: URL(string: self.picture.large),
             status: .pending

@@ -19,8 +19,6 @@ struct DefaultUpdateMatchStatusUseCase: UpdateMatchStatusUseCase {
     let repository: ProfileRepository
 
     func execute(id: String, status: MatchStatus) async throws {
-        // Any specific business logic (e.g., checking if transitions are allowed) would go here.
-        // For now, we allow toggling to support our assumed one-directional-but-reversible UX rule.
         try await repository.updateStatus(id: id, status: status)
     }
 }

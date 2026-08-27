@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// Custom button style for the shrunken icon buttons
+/// Custom button style for the `shrunken` state icon buttons
 struct DetailIconButtonStyle: ButtonStyle {
     let color: Color
     let gradient: [Color]

@@ -17,18 +17,20 @@ final class MatchDetailViewModelTests: XCTestCase {
         super.setUp()
         // We reuse the exact same mockProfileRepository we built for the list tests
         mockRepository = MockProfileRepository()
+
+        let getProfileUseCase = DefaultGetProfileUseCase(repository: mockRepository)
         let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: mockRepository)
 
         viewModel = MatchDetailViewModel(
             profileId: "1",
-            repository: mockRepository,
+            getProfile: getProfileUseCase,
             updateStatus: updateUseCase
         )
     }
 
     func testLoadProfile_Success_PopulatesProfile() async {
         // Arrange
-        let mockProfile = Profile(id: "1", firstName: "Alice", lastName: "Smith", age: 28, city: "London", state: "ENG", country: "UK", email: "alice@test.com", phone: "555", nationality: "GB", registeredDate: Date(), thumbnailURL: nil, largePhotoURL: nil, status: .pending)
+        let mockProfile = Profile.stub(id: "1", firstName: "Alice", lastName: "Smith")
         mockRepository.storage["1"] = mockProfile
 
         // Act
@@ -54,7 +56,7 @@ final class MatchDetailViewModelTests: XCTestCase {
 
     func testAccept_OptimisticallyUpdatesUI_AndPersistsToDatabase() async {
         // Arrange
-        let mockProfile = Profile(id: "1", firstName: "Alice", lastName: "Smith", age: 28, city: "London", state: "ENG", country: "UK", email: "alice@test.com", phone: "555", nationality: "GB", registeredDate: Date(), thumbnailURL: nil, largePhotoURL: nil, status: .pending)
+        let mockProfile = Profile.stub(id: "1", firstName: "Alice", lastName: "Smith")
         mockRepository.storage["1"] = mockProfile
         await viewModel.loadProfile() // Load the profile into the ViewModel state
 
@@ -70,7 +72,7 @@ final class MatchDetailViewModelTests: XCTestCase {
 
     func testDecline_Failure_RollsBackStatusToPreviousState() async {
         // Arrange
-        let mockProfile = Profile(id: "1", firstName: "Alice", lastName: "Smith", age: 28, city: "London", state: "ENG", country: "UK", email: "alice@test.com", phone: "555", nationality: "GB", registeredDate: Date(), thumbnailURL: nil, largePhotoURL: nil, status: .pending)
+        let mockProfile = Profile.stub(id: "1", firstName: "Alice", lastName: "Smith")
         mockRepository.storage["1"] = mockProfile
         await viewModel.loadProfile()
 

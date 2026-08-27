@@ -13,4 +13,5 @@ protocol LocalProfileDataSource {
     func fetchAll() throws -> [Profile]
     func fetch(id: String) throws -> Profile?
     func updateStatus(id: String, status: MatchStatus) throws
+    func highestFetchedPage() throws -> Int
 }

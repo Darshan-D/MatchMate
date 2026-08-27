@@ -20,6 +20,9 @@ final class MockProfileRepository: ProfileRepository {
     // Pre-canned data for pagination
     var remotePages: [Int: [Profile]] = [:]
 
+    // Track what page was most recently requested (for test assertions)
+    private(set) var highestLoadedPage: Int = 0
+
     func loadPage(_ page: Int) async throws -> [Profile] {
         if let error = shouldThrowError { throw error }
 
@@ -35,6 +38,7 @@ final class MockProfileRepository: ProfileRepository {
                     storage[profile.id] = profile
                 }
             }
+            highestLoadedPage = max(highestLoadedPage, page)
         } else {
             if storage.isEmpty {
                 throw ProfileRepositoryError.network(URLError(.notConnectedToInternet))
@@ -60,5 +64,10 @@ final class MockProfileRepository: ProfileRepository {
     func profile(id: String) async throws -> Profile? {
         if let error = shouldThrowError { throw error }
         return storage[id]
+    }
+
+    func resumePage() async throws -> Int {
+        if let error = shouldThrowError { throw error }
+        return highestLoadedPage == 0 ? 1 : highestLoadedPage
     }
 }

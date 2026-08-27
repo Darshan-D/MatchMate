@@ -13,18 +13,19 @@ final class MatchDetailViewModel {
     var error: ProfileRepositoryError?
 
     private let profileId: String
-    private let repository: ProfileRepository
+    private let getProfile: GetProfileUseCase
     private let updateStatus: UpdateMatchStatusUseCase
 
-    init(profileId: String, repository: ProfileRepository, updateStatus: UpdateMatchStatusUseCase) {
+    init(profileId: String, getProfile: GetProfileUseCase, updateStatus: UpdateMatchStatusUseCase) {
         self.profileId = profileId
-        self.repository = repository
+        self.getProfile = getProfile
         self.updateStatus = updateStatus
     }
 
     func loadProfile() async {
         do {
-            self.profile = try await repository.profile(id: profileId)
+            self.profile = try await getProfile.execute(id: profileId)
+            self.error = nil
         } catch {
             self.error = .persistence(error)
         }
@@ -48,6 +49,7 @@ final class MatchDetailViewModel {
 
         do {
             try await updateStatus.execute(id: profileId, status: status)
+            self.error = nil
         } catch {
             // Rollback
             currentProfile.status = oldStatus

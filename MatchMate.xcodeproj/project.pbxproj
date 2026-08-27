@@ -18,36 +18,30 @@
 			remoteGlobalIDString = 7D61D9C3303EEFD100357B39;
 			remoteInfo = MatchMate;
 		};
-		7D61D9DE303EEFD200357B39 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7D61D9BC303EEFD100357B39 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 7D61D9C3303EEFD100357B39;
-			remoteInfo = MatchMate;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		7D61D9C4303EEFD100357B39 /* MatchMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MatchMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7D61D9D3303EEFD200357B39 /* MatchMateTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MatchMateTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7D61D9DD303EEFD200357B39 /* MatchMateUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MatchMateUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7D6DD136303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMate" target */ = {
+		7D7F9EB0303F91D600BDEBC7 /* Exceptions for "MatchMateTests" folder in "MatchMate" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Data/ProfileEntityIntegrationTests.swift,
+				"Fixtures/Profile+Fixtures.swift",
 				Mock/MockProfileRepository.swift,
 				Presentation/MatchDetailViewModelTests.swift,
 				Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
 		};
-		7D6DD137303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMateTests" target */ = {
+		7D7F9EB1303F91D600BDEBC7 /* Exceptions for "MatchMateTests" folder in "MatchMateTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Data/ProfileEntityIntegrationTests.swift,
+				"Fixtures/Profile+Fixtures.swift",
 				Mock/MockProfileRepository.swift,
 				Presentation/MatchDetailViewModelTests.swift,
 				Presentation/MatchListViewModelTests.swift,
@@ -62,11 +56,11 @@
 			path = MatchMate;
 			sourceTree = "<group>";
 		};
-		7D6DD131303F151C00498F6C /* MatchMateTests */ = {
+		7D7F9EAB303F91D600BDEBC7 /* MatchMateTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				7D6DD136303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMate" target */,
-				7D6DD137303F151C00498F6C /* Exceptions for "MatchMateTests" folder in "MatchMateTests" target */,
+				7D7F9EB0303F91D600BDEBC7 /* Exceptions for "MatchMateTests" folder in "MatchMate" target */,
+				7D7F9EB1303F91D600BDEBC7 /* Exceptions for "MatchMateTests" folder in "MatchMateTests" target */,
 			);
 			path = MatchMateTests;
 			sourceTree = "<group>";
@@ -89,20 +83,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7D61D9DA303EEFD200357B39 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		7D61D9BB303EEFD100357B39 = {
 			isa = PBXGroup;
 			children = (
-				7D6DD131303F151C00498F6C /* MatchMateTests */,
+				7D7F9EAB303F91D600BDEBC7 /* MatchMateTests */,
 				7D61D9C6303EEFD100357B39 /* MatchMate */,
 				7D61D9C5303EEFD100357B39 /* Products */,
 			);
@@ -113,7 +100,6 @@
 			children = (
 				7D61D9C4303EEFD100357B39 /* MatchMate.app */,
 				7D61D9D3303EEFD200357B39 /* MatchMateTests.xctest */,
-				7D61D9DD303EEFD200357B39 /* MatchMateUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -135,7 +121,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7D61D9C6303EEFD100357B39 /* MatchMate */,
-				7D6DD131303F151C00498F6C /* MatchMateTests */,
+				7D7F9EAB303F91D600BDEBC7 /* MatchMateTests */,
 			);
 			name = MatchMate;
 			packageProductDependencies = (
@@ -165,26 +151,6 @@
 			productReference = 7D61D9D3303EEFD200357B39 /* MatchMateTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		7D61D9DC303EEFD200357B39 /* MatchMateUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7D61D9ED303EEFD200357B39 /* Build configuration list for PBXNativeTarget "MatchMateUITests" */;
-			buildPhases = (
-				7D61D9D9303EEFD200357B39 /* Sources */,
-				7D61D9DA303EEFD200357B39 /* Frameworks */,
-				7D61D9DB303EEFD200357B39 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				7D61D9DF303EEFD200357B39 /* PBXTargetDependency */,
-			);
-			name = MatchMateUITests;
-			packageProductDependencies = (
-			);
-			productName = MatchMateUITests;
-			productReference = 7D61D9DD303EEFD200357B39 /* MatchMateUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -199,10 +165,6 @@
 						CreatedOnToolsVersion = 26.0;
 					};
 					7D61D9D2303EEFD200357B39 = {
-						CreatedOnToolsVersion = 26.0;
-						TestTargetID = 7D61D9C3303EEFD100357B39;
-					};
-					7D61D9DC303EEFD200357B39 = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 7D61D9C3303EEFD100357B39;
 					};
@@ -227,7 +189,6 @@
 			targets = (
 				7D61D9C3303EEFD100357B39 /* MatchMate */,
 				7D61D9D2303EEFD200357B39 /* MatchMateTests */,
-				7D61D9DC303EEFD200357B39 /* MatchMateUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -241,13 +202,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		7D61D9D1303EEFD200357B39 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		7D61D9DB303EEFD200357B39 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -271,13 +225,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7D61D9D9303EEFD200357B39 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -285,11 +232,6 @@
 			isa = PBXTargetDependency;
 			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
 			targetProxy = 7D61D9D4303EEFD200357B39 /* PBXContainerItemProxy */;
-		};
-		7D61D9DF303EEFD200357B39 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
-			targetProxy = 7D61D9DE303EEFD200357B39 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -523,46 +465,6 @@
 			};
 			name = Release;
 		};
-		7D61D9EE303EEFD200357B39 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9U46VJ8Y44;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dunderMiffilin.MatchMateUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = MatchMate;
-			};
-			name = Debug;
-		};
-		7D61D9EF303EEFD200357B39 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9U46VJ8Y44;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dunderMiffilin.MatchMateUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = MatchMate;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -589,15 +491,6 @@
 			buildConfigurations = (
 				7D61D9EB303EEFD200357B39 /* Debug */,
 				7D61D9EC303EEFD200357B39 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		7D61D9ED303EEFD200357B39 /* Build configuration list for PBXNativeTarget "MatchMateUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				7D61D9EE303EEFD200357B39 /* Debug */,
-				7D61D9EF303EEFD200357B39 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

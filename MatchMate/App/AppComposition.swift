@@ -12,18 +12,20 @@ import SwiftData
 enum AppComposition {
     @MainActor
     static func makeMatchListViewModel(context: ModelContext) -> MatchListViewModel {
-        // These concrete types will be implemented in the Data layer (Phase 2)
         let remote = RandomUserRemoteDataSource(session: .shared)
         let local = SwiftDataLocalDataSource(context: context)
         let repo = ProfileRepositoryImpl(remote: remote, local: local)
 
         let fetchUseCase = DefaultFetchProfilesUseCase(repository: repo)
+        let getCachedUseCase = DefaultGetCachedProfilesUseCase(repository: repo)
         let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: repo)
+        let getResumePageUseCase = DefaultGetResumePageUseCase(repository: repo)
 
         return MatchListViewModel(
             fetchProfiles: fetchUseCase,
+            getCachedProfiles: getCachedUseCase,
             updateStatus: updateUseCase,
-            repository: repo
+            getResumePage: getResumePageUseCase
         )
     }
 
@@ -33,11 +35,12 @@ enum AppComposition {
         let local = SwiftDataLocalDataSource(context: context)
         let repo = ProfileRepositoryImpl(remote: remote, local: local)
 
+        let getProfileUseCase = DefaultGetProfileUseCase(repository: repo)
         let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: repo)
 
         return MatchDetailViewModel(
             profileId: profileId,
-            repository: repo,
+            getProfile: getProfileUseCase,
             updateStatus: updateUseCase
         )
     }
