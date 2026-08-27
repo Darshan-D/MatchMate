@@ -78,3 +78,18 @@ This keeps the two screens agreeing for normal back-and-forth navigation, but it
 
 This app was built with help from several LLMs on their free tiers (Gemini, Claude, ChatGPT, DeepSeek). The total could likely have been lower with more generous usage limits, free-tier rate limits meant switching tools mid-task rather than working straight through with one. This is also why there are no `SKILLS.md` or `RULES.md` files for AI agents in this repo.
 
+## Testing Details
+
+Detailed testing results for the following test cases are available in this [Google Drive link](https://drive.google.com/drive/folders/15_QPq3KGBDeCac2FyycEQP_NjssuBXOA?usp=sharing).
+
+### Test Cases
+
+* **Test Case 1: Pagination** — Pagination works as expected using an infinite-scroll approach.
+* **Test Case 2: UI Consistency** — The UI remains consistent between the main feed and the detailed profile view.
+* **Test Case 3: Data Persistence** — Profile status is persisted correctly after the app is terminated and reopened.
+* **Test Case 4: Airplane Mode** — The app displays cached data when the device is in Airplane Mode.
+* **Test Case 5: Cold Start** — When the app is launched for the first time without an internet connection and no cached data is available, it displays an error screen with a **Retry** button.
+* **Test Case 6: View Model Tests** — All ViewModel unit tests pass successfully.
+
+
+
