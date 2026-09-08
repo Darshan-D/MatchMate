@@ -2,15 +2,15 @@
 //  ProfileEntity.swift
 //  MatchMate
 //
-//  Created by Darshan Dodia on 26/08/26.
-//
 
 import Foundation
 import SwiftData
 
+/// SwiftData persistence record. Mirrors `Profile` plus the ordering key. Kept internal to the
+/// data layer — it never leaves `ProfileStore`.
 @Model
 final class ProfileEntity {
-    @Attribute(.unique) var id: String // login.uuid
+    @Attribute(.unique) var id: String
     var firstName: String
     var lastName: String
     var age: Int
@@ -20,33 +20,34 @@ final class ProfileEntity {
     var email: String
     var phone: String
     var nationality: String
-    var registeredDate: Date
+    var registeredDate: Date?
     var thumbnailURLString: String?
     var largePhotoURLString: String?
     var statusRaw: String
-    var pageFetched: Int
+    var sortIndex: Int
 
-    // Computed property bridging the primitive string to the Domain enum
     var status: MatchStatus {
         get { MatchStatus(rawValue: statusRaw) ?? .pending }
         set { statusRaw = newValue.rawValue }
     }
 
-    init(id: String,
-         firstName: String,
-         lastName: String,
-         age: Int,
-         city: String,
-         state: String,
-         country: String,
-         email: String,
-         phone: String,
-         nationality: String,
-         registeredDate: Date,
-         thumbnailURLString: String?,
-         largePhotoURLString: String?,
-         statusRaw: String,
-         pageFetched: Int) {
+    init(
+        id: String,
+        firstName: String,
+        lastName: String,
+        age: Int,
+        city: String,
+        state: String,
+        country: String,
+        email: String,
+        phone: String,
+        nationality: String,
+        registeredDate: Date?,
+        thumbnailURLString: String?,
+        largePhotoURLString: String?,
+        statusRaw: String,
+        sortIndex: Int
+    ) {
         self.id = id
         self.firstName = firstName
         self.lastName = lastName
@@ -61,6 +62,6 @@ final class ProfileEntity {
         self.thumbnailURLString = thumbnailURLString
         self.largePhotoURLString = largePhotoURLString
         self.statusRaw = statusRaw
-        self.pageFetched = pageFetched
+        self.sortIndex = sortIndex
     }
 }

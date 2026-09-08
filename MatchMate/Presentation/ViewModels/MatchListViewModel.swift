@@ -2,120 +2,96 @@
 //  MatchListViewModel.swift
 //  MatchMate
 //
-//  Created by Darshan Dodia on 26/08/26.
-//
 
 import Foundation
 import Observation
 
+@MainActor
 @Observable
 final class MatchListViewModel {
-    var profiles: [Profile] = []
-    var isLoadingPage: Bool = false
-    var error: ProfileRepositoryError?
 
-    private let fetchProfiles: FetchProfilesUseCase
-    private let getCachedProfiles: GetCachedProfilesUseCase
-    private let updateStatus: UpdateMatchStatusUseCase
-    private let getResumePage: GetResumePageUseCase
+    private(set) var profiles: [Profile] = []
+    private(set) var isLoadingInitial = false
+    private(set) var isLoadingMore = false
+    private(set) var isOffline = false
+    var error: AppError?
 
-
-    private var currentPage: Int = 1
-
-    init(fetchProfiles: FetchProfilesUseCase,
-         getCachedProfiles: GetCachedProfilesUseCase,
-         updateStatus: UpdateMatchStatusUseCase,
-         getResumePage: GetResumePageUseCase) {
-        self.fetchProfiles = fetchProfiles
-        self.getCachedProfiles = getCachedProfiles
-        self.updateStatus = updateStatus
-        self.getResumePage = getResumePage
+    /// Non-nil when the first load produced nothing to show — drives the full-screen retry state.
+    var loadFailure: AppError? {
+        guard profiles.isEmpty, !isLoadingInitial, let error else { return nil }
+        return error
     }
 
-    func loadInitial() async {
-        guard profiles.isEmpty else { return }
-        isLoadingPage = true
-        error = nil
+    private let repository: ProfileRepository
+    private var started = false
 
-        do {
-            let cached = try await getCachedProfiles.execute()
-
-            if cached.isEmpty {
-                // True first launch — nothing on disk, must go to network.
-                currentPage = 1
-                profiles = try await fetchProfiles.execute(page: currentPage)
-            } else {
-                // Cache is the source of truth — show it immediately, no network needed.
-                profiles = cached
-                currentPage = try await getResumePage.execute()
-            }
-        } catch let err as ProfileRepositoryError {
-            self.error = err
-            if profiles.isEmpty { await refreshFromCache() }
-        } catch {
-            self.error = .persistence(error)
-        }
-
-        isLoadingPage = false
+    init(repository: ProfileRepository) {
+        self.repository = repository
     }
 
-    func loadNextPageIfNeeded(currentItem: Profile) async {
-        guard !isLoadingPage, let lastItem = profiles.last, currentItem.id == lastItem.id else { return }
+    /// Entry point for the view's `.task`. Runs for the lifetime of the screen: it kicks the
+    /// initial load and then keeps consuming the repository's streams until the task is
+    /// cancelled (i.e. the view goes away).
+    func start() async {
+        guard !started else { return }
+        started = true
 
-        isLoadingPage = true
-        currentPage += 1
-        do {
-            profiles = try await fetchProfiles.execute(page: currentPage)
-            self.error = nil
-        } catch ProfileRepositoryError.offlineNoMoreData {
-            self.error = .offlineNoMoreData
-            currentPage -= 1
-        } catch let err as ProfileRepositoryError {
-            self.error = err
-            currentPage -= 1 // Revert page increment on failure
-        } catch {
-            self.error = .persistence(error)
-        }
-        isLoadingPage = false
+        async let streaming: Void = consumeStreams()
+        await runBootstrap()
+        await streaming
     }
 
-    func accept(_ id: String) async {
-        await optimisticallyUpdateStatus(id: id, newStatus: .accepted)
+    func retry() async {
+        await runBootstrap()
     }
 
-    func decline(_ id: String) async {
-        await optimisticallyUpdateStatus(id: id, newStatus: .declined)
+    func loadMoreIfNeeded(currentItem: Profile) async {
+        guard !isLoadingMore, currentItem.id == profiles.last?.id else { return }
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+        await run { try await repository.loadNextPage() }
     }
 
-    private func optimisticallyUpdateStatus(id: String, newStatus: MatchStatus) async {
-        // 1. Find target and its old status for potential rollback
-        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return }
-        let oldStatus = profiles[index].status
+    func refresh() async {
+        await run { try await repository.refresh() }
+    }
 
-        // 2. Optimistic UI update (instant feedback)
-        profiles[index].status = newStatus
+    func accept(_ id: String) async { await run { try await repository.updateStatus(id: id, to: .accepted) } }
+    func decline(_ id: String) async { await run { try await repository.updateStatus(id: id, to: .declined) } }
 
-        // 3. Persist to SwiftData
-        do {
-            try await updateStatus.execute(id: id, status: newStatus)
-            self.error = nil
-        } catch {
-            // 4. Rollback on failure
-            profiles[index].status = oldStatus
-            self.error = .persistence(error)
+    // MARK: - Internals
+
+    private func runBootstrap() async {
+        isLoadingInitial = profiles.isEmpty
+        await run { try await repository.bootstrap() }
+        isLoadingInitial = false
+    }
+
+    private func consumeStreams() async {
+        async let profileUpdates: Void = observeProfiles()
+        async let connectivityUpdates: Void = observeConnectivity()
+        _ = await (profileUpdates, connectivityUpdates)
+    }
+
+    private func observeProfiles() async {
+        for await list in repository.profiles() {
+            profiles = list
+            if !list.isEmpty { isLoadingInitial = false }
         }
     }
 
-    @MainActor
-    internal func refreshFromCache() async {
+    private func observeConnectivity() async {
+        for await connected in repository.connectivity() {
+            isOffline = !connected
+        }
+    }
+
+    private func run(_ operation: () async throws -> Void) async {
         do {
-            let cached = try await getCachedProfiles.execute()
-            // Only update if there's a difference to avoid unnecessary UI redraws
-            if self.profiles != cached {
-                self.profiles = cached
-            }
+            try await operation()
+            error = nil
         } catch {
-            print("❌ [ERROR][MatchListViewModel] Failed to sync from local cache: \(error)")
+            self.error = (error as? AppError) ?? .persistence
         }
     }
 }

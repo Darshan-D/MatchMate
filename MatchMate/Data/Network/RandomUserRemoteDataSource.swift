@@ -2,46 +2,37 @@
 //  RandomUserRemoteDataSource.swift
 //  MatchMate
 //
-//  Created by Darshan Dodia on 26/08/26.
-//
 
 import Foundation
+import os
 
-@MainActor
-final class RandomUserRemoteDataSource: RemoteProfileDataSource {
-    private let session: URLSession
+/// Knows how to turn a page number into a Random User request. Endpoint-specific; transport and
+/// error mapping live in `HTTPClient`.
+protocol RemoteProfileDataSource: Sendable {
+    func fetchPage(_ page: Int) async throws -> RandomUserResponse
+}
 
-    init(session: URLSession = .shared) {
-        self.session = session
+struct RandomUserRemoteDataSource: RemoteProfileDataSource {
+    private let client: HTTPClient
+    private let config: APIConfig
+
+    init(client: HTTPClient, config: APIConfig = .live) {
+        self.client = client
+        self.config = config
     }
 
-    func fetchPage(_ page: Int, results: Int, seed: String) async throws -> [ProfileDTO] {
-        var components = URLComponents(string: "https://randomuser.me/api/")!
+    func fetchPage(_ page: Int) async throws -> RandomUserResponse {
+        guard var components = URLComponents(url: config.baseURL, resolvingAgainstBaseURL: false) else {
+            throw AppError.server(-1)
+        }
         components.queryItems = [
             URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "results", value: String(results)),
-            URLQueryItem(name: "seed", value: seed)
+            URLQueryItem(name: "results", value: String(config.resultsPerPage)),
+            URLQueryItem(name: "seed", value: config.seed)
         ]
+        guard let url = components.url else { throw AppError.server(-1) }
 
-        guard let url = components.url else {
-            print("❌ [ERROR][RandomUserRemoteDataSource] Remote error: Invalid URL components.")
-            throw URLError(.badURL)
-        }
-
-        do {
-            let (data, _) = try await session.data(from: url)
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(RandomUserResponse.self, from: data)
-
-            print("✅ [SUCCESS][RandomUserRemoteDataSource] Remote success: Fetched and decoded page \(page) (\(response.results.count) results).")
-            return response.results
-
-        } catch let error as URLError {
-            print("⚠️ [WARN][RandomUserRemoteDataSource] Remote network error on page \(page): \(error.localizedDescription)")
-            throw ProfileRepositoryError.network(error)
-        } catch {
-            print("❌ [ERROR][RandomUserRemoteDataSource] Remote decoding error on page \(page): \(error)")
-            throw ProfileRepositoryError.decoding(error)
-        }
+        Log.network.debug("Fetching page \(page)")
+        return try await client.get(url)
     }
 }
