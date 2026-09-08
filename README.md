@@ -1,80 +1,155 @@
 # MatchMate
 
-An iOS app showing a paginated feed of profiles from the Random User API, with Accept/Decline actions and offline support. Built with SwiftUI, SwiftData, and Clean Architecture / MVVM.
+A small matrimonial-style app: a paginated feed of profiles from the Random User API, with
+Accept / Decline from both the list and a full profile screen, offline support, and status that
+stays consistent everywhere. SwiftUI + SwiftData + MVVM over a reactive repository.
 
-## How to Run
+## How to run
 
-1. Open `MatchMate.xcodeproj` in Xcode 15 or later.
-2. Let Swift Package Manager resolve the **Kingfisher** dependency.
-3. Pick an iOS 17+ simulator or device as the run target.
-4. Build and run (`Cmd + R`).
+1. Open `MatchMate.xcodeproj` in Xcode 26 (or newer).
+2. Let Swift Package Manager resolve **Kingfisher**.
+3. Select an iOS 17+ simulator or device and run (`⌘R`).
 
-No API key or config needed — the app calls `randomuser.me` with a fixed seed. To test offline mode: launch once with network on so a page or two caches, then enable Airplane Mode, kill the app, and relaunch.
+No API key or configuration needed — the app calls `randomuser.me` with a fixed seed.
 
-## Architecture Sketch
+To exercise offline mode: launch once online so a page or two caches, then enable Airplane Mode
+and relaunch.
 
-Three layers, dependencies pointing inward, wired up in a composition root:
+**Tests:** `⌘U`, or
 
 ```
-Presentation (SwiftUI Views, @Observable ViewModels)
-        │  depends on protocols only
-        ▼
-Domain (Profile, MatchStatus, Use Cases)
-        ▲  no knowledge of SwiftUI / SwiftData / URLSession
-        │  implements
-Data (URLSession + DTOs, SwiftData + @Model, ProfileRepositoryImpl)
+xcodebuild test -project MatchMate.xcodeproj -scheme MatchMate \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-- **Domain** — `Profile` (plain struct) and `MatchStatus` are the only types Presentation knows about. `UseCases` are thin wrappers that forward to `ProfileRepository`.
-- **Data** — `RandomUserRemoteDataSource` fetches/decodes from the network; `SwiftDataLocalDataSource` reads/writes `ProfileEntity` via SwiftData. `ProfileRepositoryImpl` is the only place that knows about both, and decides network-vs-cache.
-- **Presentation** — `MatchListViewModel` / `MatchDetailViewModel` hold UI state and call use cases only; no `URLSession` or `ModelContext` references.
-- **`AppComposition`** builds the concrete graph (real data sources, repository, use cases) and hands ViewModels to the Views at app launch.
+## Architecture
 
-Everything touching SwiftData or DI is `@MainActor` isolated.
+```
+SwiftUI Views ─▶ @MainActor @Observable ViewModels ─▶ ProfileRepository (protocol)
+                                                              │
+                       ┌──────────────────────────────────────┼─────────────────────┐
+              actor ProfileRepositoryImpl              @ModelActor ProfileStore   NetworkMonitor
+              • canonical in-memory list                • SwiftData persistence   • NWPathMonitor
+              • AsyncStream broadcast                   • off the main thread
+              • network-first, cache fallback
+                          │
+              RandomUserRemoteDataSource ─▶ URLSessionHTTPClient (status-code aware)
+```
 
-## Database Choice
+- **Domain** (`Profile`, `MatchStatus`, `ProfileRepository`) — plain `Sendable` value types and one
+  protocol. No SwiftUI, SwiftData, or URLSession.
+- **Data**
+  - `URLSessionHTTPClient` — generic GET, `async/await`, **off the main actor**. Maps HTTP status
+    (429 → rate-limited, 5xx → server), transport errors, and decoding errors onto `AppError`.
+  - `RandomUserRemoteDataSource` — builds the request from an injected `APIConfig` (base URL, seed,
+    page size — nothing hardcoded in the repository).
+  - `ProfileStore` — a `@ModelActor`, so every SwiftData read/write runs on its own executor, never
+    the main thread. Exposes only domain types; `ProfileEntity` / `ModelContext` never leak out.
+  - `ProfileRepositoryImpl` — an `actor` that owns the single source of truth (see below).
+- **Presentation** — two `@Observable` view models that depend only on `ProfileRepository`. They
+  hold view state and consume streams; no persistence or networking types in sight.
+- **Composition** — `AppEnvironment` builds the graph **once** and hands both view models the
+  **same** repository instance.
 
-**SwiftData**, over Core Data or a custom store — the `@Model` macro replaces `.xcdatamodeld`/`NSManagedObject` boilerplate with plain Swift, and it integrates directly with `async/await` so the local data source is just `throws` functions called from async use cases. `ProfileEntity` mirrors `Profile` but adds `pageFetched: Int`, which is what makes pagination resumable across launches. `MatchMateApp` also falls back to an in-memory store if the persistent one fails to load, so a corrupted store doesn't crash the app outright.
+There is no use-case layer: for an app this size each use case was a one-line pass-through, so the
+view models talk to the repository protocol directly. Pagination / merge / offline orchestration —
+the logic actually worth testing — lives in the repository.
+
+## Database choice — SwiftData
+
+`@Model` replaces `.xcdatamodeld` + `NSManagedObject` boilerplate with plain Swift, and it pairs
+naturally with `async/await` and Swift concurrency. The whole persistence surface is one
+`@ModelActor` (`ProfileStore`) with five methods.
+
+`ProfileEntity` mirrors `Profile` and adds `sortIndex` — a deterministic key
+(`(page − 1) × pageSize + indexInPage`) that keeps the list in API order and stable across
+re-fetches. `upsert` deliberately **never** overwrites `status`, so a local Accept/Decline always
+wins over a re-fetched server row. `MatchMateApp` falls back to an in-memory container if the
+persistent store can't be opened, so a corrupt store degrades instead of crashing.
+
+## How pagination + status sync work
+
+### One source of truth, streamed
+
+`ProfileRepositoryImpl` keeps the canonical `[Profile]` in memory and publishes it as a broadcast
+`AsyncStream<[Profile]>`. Both screens subscribe to `repository.profiles()`:
+
+- the **list** renders the whole stream;
+- the **detail** screen renders `stream.first { $0.id == id }`.
+
+Because they read the *same* stream, they cannot disagree — there is no shared view model, no
+`.onAppear` re-read, no manual refresh, and it stays correct even with both screens visible
+(iPad split view). A status change emits **optimistically** (the in-memory list updates and
+broadcasts before the DB write); if persistence fails it reverts and re-emits, and the view model
+surfaces the error. One code path, fully unit-tested.
+
+### Pagination
+
+- `bootstrap()` loads the cache, emits it immediately (instant first paint), sets the paging
+  cursor to `highestCachedPage + 1`, and — if online — kicks a silent background `refresh()`.
+  If the cache is empty it fetches page 1; if that fails offline it reports `offlineNoCache` and
+  the list shows a full-screen retry state.
+- Scrolling to the last row calls `loadNextPage()`. The network is tried first; the page cursor is
+  advanced **only on success**, so a failed page never wedges pagination.
+- Offline, `loadNextPage()` reports `endOfCache` — the banner appears, the list stays visible.
+- Pull-to-refresh re-fetches every loaded page and merges server-side field changes while keeping
+  local `status` and ordering.
+- Reconnecting (via `NWPathMonitor`) triggers a `refresh()` automatically.
+
+## Error handling
+
+| Failure | Handling |
+|---|---|
+| No connectivity | `NWPathMonitor` drives an offline banner; requests fail fast (`waitsForConnectivity = false`) and fall back to cache |
+| HTTP 429 | Surfaced as a "slow down" message; cache still shown |
+| HTTP 5xx / unexpected status | Surfaced with the code; cache still shown |
+| Malformed response | `AppError.decoding`; cache still shown |
+| DB read/write failure | `AppError.persistence`; optimistic status change is rolled back |
+| Offline cold start, no cache | Full-screen retry state |
+| Scrolled past the cache offline | Inline banner, list stays put |
+
+## Concurrency
+
+`SWIFT_DEFAULT_ACTOR_ISOLATION` is set to `nonisolated` for this target: the UI layer
+(`@MainActor` view models + views) is the only main-actor code. Networking, JSON decoding, and
+SwiftData all run off the main thread — `URLSessionHTTPClient` is a plain `Sendable` struct,
+`ProfileStore` is a `@ModelActor`, and `ProfileRepositoryImpl` is an `actor`. Cross-boundary types
+(`Profile`, `MatchStatus`, `AppError`, DTOs) are `Sendable` value types.
+
+## Testing
+
+`xcodebuild test` runs ~40 tests across:
+
+- **`MatchListViewModelTests` / `MatchDetailViewModelTests`** — initial load, pagination + ordering,
+  optimistic accept/decline + rollback, offline empty state, end-of-cache, connectivity toggling,
+  and **live cross-screen sync** (a status change made outside the view model propagates in).
+- **`ProfileRepositoryImplTests`** — the offline-fallback matrix, `sortIndex` assignment, merge
+  preserving local status, the paging cursor not advancing on failure, optimistic-then-rollback
+  emission order, and multi-subscriber broadcast. Uses a real `RandomUserRemoteDataSource` over a
+  stubbed `HTTPClient`.
+- **`HTTPClientTests`** — 200 / 429 / 503 / malformed / transport-error mapping via `URLProtocol`.
+- **`ProfileStoreTests`** — real SwiftData against an in-memory container: upsert insert/update,
+  status preservation, `sortIndex` ordering, `highestLoadedPage`.
+- **`ProfileDTOMappingTests`** — `login.uuid → id`, picture URLs, and date parsing (fractional
+  seconds, plain ISO-8601, and garbage → `nil` rather than "today").
+
+The mocks (`MockProfileRepository`, `MockProfileStore`, `MockNetworkMonitor`, `MockHTTPClient`)
+mirror the real contracts — same ordering, same status-preservation semantics.
 
 ## Why Kingfisher
 
-`AsyncImage` doesn't persist images to disk — it only holds them in `URLCache`'s session memory, which iOS evicts on app termination, so a relaunch means re-downloading every thumbnail. Since offline usability is a core requirement here, profile images needed to survive a cold, fully-offline relaunch too, not just the profile data. Kingfisher's `KFImage` caches to disk automatically, so images load instantly from cache on a subsequent offline launch instead of showing broken/placeholder states.
+`AsyncImage` only caches in `URLCache`'s session memory, which iOS evicts on termination — every
+profile image would re-download on a cold offline relaunch. Offline usability is a core
+requirement here, so images need to survive that too. `KFImage` caches to disk automatically.
 
-## Pagination + Status Sync
+## Known gaps
 
-**Pagination:**
+- No SwiftData schema migration — `sortIndex` is a new field and a fresh install is assumed.
+- `refresh()` re-fetches all previously-loaded pages sequentially. Fine for the expected data
+  volume; not optimized for very deep lists.
+- No single-profile deep-linking — the detail screen is always reached from a loaded list row.
+- `AppError` equality compares case identity, not the wrapped underlying error.
 
-Loading more profiles happens automatically as the user scrolls — each row triggers a check, and when that row is the *last* one currently shown, the app loads the next page.
+## Hours
 
-On launch, `loadInitial()` decides where to start:
-- **Empty cache** (true first launch) → fetch page 1 from the network.
-- **Cache has data** → show it immediately, no network wait, and resume from the last page that was ever saved (stored per-profile as `pageFetched`). So if a user quit the app on page 3, relaunching continues from page 4 instead of re-fetching pages 1–2.
-
-Every page request tries the network first. If that fails, the app falls back to whatever is cached locally:
-- If there's *no* cache at all (offline on a fresh install), the app shows a full-screen "you're offline" state.
-- If the user scrolls past everything that was ever cached, it shows a smaller banner instead ("no more data offline") — the list itself stays visible.
-
-If a page fetch fails for any reason, the app resets the current page number back to where it was, so a failed attempt doesn't leave pagination stuck on a page that never actually loaded.
-
-**Status sync (List ↔ Detail):**
-
-Tapping Accept/Decline updates the UI instantly — before the change is even saved. If saving fails, the change is undone and an error is shown. This makes the buttons feel responsive without ever showing a status that didn't actually persist.
-
-The List and Detail screens don't share state directly — no shared ViewModel, no live database subscription. Each screen manages its own copy of the data. To stay in sync, the List screen simply re-reads the saved data every time it reappears on screen (e.g., when the user backs out of the Detail screen), and only redraws if something actually changed.
-
-This keeps the two screens agreeing for normal back-and-forth navigation, but it's a "check when you reappear" approach rather than a live, always-in-sync connection — the two screens don't push updates to each other in real time. This was a deliberate trade-off to keep a clear separation of concerns; see Known Gaps for where it falls short.
-
-## Known Gaps
-
-- No live/reactive sync — List and Detail wouldn't self-correct if both were visible at once (e.g., iPad split-screen), since sync relies on `.onAppear`, not a live binding.
-- Base URL, `resultsPerPage`, and the API seed are hardcoded in `ProfileRepositoryImpl` rather than injected config.
-- No reachability pre-check — every offline page load pays for a timed-out request before falling back to cache.
-- Everything is pinned to `@MainActor`; a very large pagination batch could cause frame drops on older devices. A dedicated `ModelActor` for writes would fix this.
-- `upsert` intentionally never overwrites `status` on re-fetch (to preserve local decisions), so there's no path for status to ever be corrected by the server.
-
-## Hours Spent
-
-**Approximately** 9 hours
-
-This app was built with help from several LLMs on their free tiers (Gemini, Claude, ChatGPT, DeepSeek). The total could likely have been lower with more generous usage limits, free-tier rate limits meant switching tools mid-task rather than working straight through with one. This is also why there are no `SKILLS.md` or `RULES.md` files for AI agents in this repo.
-
+~9 hours, including the rebuild from an earlier version.
