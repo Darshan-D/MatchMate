@@ -2,8 +2,6 @@
 //  Profile+Fixtures.swift
 //  MatchMateTests
 //
-//  Created by Darshan Dodia on 27/08/26.
-//
 
 import Foundation
 @testable import MatchMate
@@ -15,14 +13,15 @@ extension Profile {
         lastName: String = "Doe",
         age: Int = 30,
         city: String = "London",
-        state: String = "ENG",
-        country: String = "UK",
-        email: String = "john.doe@test.com",
+        state: String = "England",
+        country: String = "United Kingdom",
+        email: String = "john.doe@example.com",
         phone: String = "555-0199",
         nationality: String = "GB",
-        registeredDate: Date = Date(),
-        thumbnailURL: URL? = nil,
-        largePhotoURL: URL? = nil,
+        registeredDate: Date? = Date(timeIntervalSince1970: 1_400_000_000),
+        thumbnailURL: URL? = URL(string: "https://example.com/medium.jpg"),
+        largePhotoURL: URL? = URL(string: "https://example.com/large.jpg"),
+        sortIndex: Int = 0,
         status: MatchStatus = .pending
     ) -> Profile {
         Profile(
@@ -39,7 +38,16 @@ extension Profile {
             registeredDate: registeredDate,
             thumbnailURL: thumbnailURL,
             largePhotoURL: largePhotoURL,
+            sortIndex: sortIndex,
             status: status
         )
+    }
+
+    /// A contiguous page of stubs with sequential ids and sort indices.
+    static func page(_ page: Int, perPage: Int = 10, status: MatchStatus = .pending) -> [Profile] {
+        let base = (page - 1) * perPage
+        return (0..<perPage).map { offset in
+            .stub(id: "\(base + offset)", firstName: "User\(base + offset)", sortIndex: base + offset, status: status)
+        }
     }
 }

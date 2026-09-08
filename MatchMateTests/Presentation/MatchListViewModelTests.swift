@@ -1,8 +1,6 @@
 //
 //  MatchListViewModelTests.swift
-//  MatchMate
-//
-//  Created by Darshan Dodia on 26/08/26.
+//  MatchMateTests
 //
 
 import XCTest
@@ -10,156 +8,146 @@ import XCTest
 
 @MainActor
 final class MatchListViewModelTests: XCTestCase {
-    var viewModel: MatchListViewModel!
-    var mockRepository: MockProfileRepository!
+
+    private var repository: MockProfileRepository!
+    private var viewModel: MatchListViewModel!
 
     override func setUp() {
         super.setUp()
-        mockRepository = MockProfileRepository()
-
-        let fetchUseCase = DefaultFetchProfilesUseCase(repository: mockRepository)
-        let cachedUseCase = DefaultGetCachedProfilesUseCase(repository: mockRepository)
-        let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: mockRepository)
-        let resumePageUseCase = DefaultGetResumePageUseCase(repository: mockRepository)
-
-        viewModel = MatchListViewModel(
-            fetchProfiles: fetchUseCase,
-            getCachedProfiles: cachedUseCase,
-            updateStatus: updateUseCase,
-            getResumePage: resumePageUseCase
-        )
+        repository = MockProfileRepository()
+        viewModel = MatchListViewModel(repository: repository)
     }
 
-    func testLoadInitial_PopulatesProfiles() async {
-        // Arrange
-        let mockProfile = Profile.stub(id: "1", firstName: "John", lastName: "Doe")
-        mockRepository.remotePages[1] = [mockProfile]
-
-        // Act
-        await viewModel.loadInitial()
-
-        // Assert
-        XCTAssertEqual(viewModel.profiles.count, 1)
-        XCTAssertEqual(viewModel.profiles.first?.id, "1")
-        XCTAssertFalse(viewModel.isLoadingPage)
+    private func start() {
+        startObserving { [viewModel] in await viewModel?.start() }
     }
 
-    func testPagination_AppendsData_DoesNotReplace() async {
-        // Arrange
-        let profile1 = Profile.stub(id: "1", firstName: "A")
-        let profile2 = Profile.stub(id: "2", firstName: "X")
-        mockRepository.remotePages[1] = [profile1]
-        mockRepository.remotePages[2] = [profile2]
+    // MARK: Initial load
 
-        // Act
-        await viewModel.loadInitial()
-        await viewModel.loadNextPageIfNeeded(currentItem: profile1)
+    func test_start_populatesFromCache() async {
+        await repository.seed(Profile.page(1, perPage: 3))
 
-        // Assert
-        XCTAssertEqual(viewModel.profiles.count, 2)
-        XCTAssertTrue(viewModel.profiles.contains(where: { $0.id == "2" }))
+        start()
+        await waitUntil("profiles loaded") { self.viewModel.profiles.count == 3 }
+
+        XCTAssertEqual(viewModel.profiles.map(\.id), ["0", "1", "2"])
+        XCTAssertFalse(viewModel.isLoadingInitial)
     }
 
-    func testAccept_OptimisticallyUpdatesUI_ThenPersists() async {
-        // Arrange
-        let profile = Profile.stub(id: "1", firstName: "John", lastName: "Doe")
-        mockRepository.storage["1"] = profile
-        viewModel.profiles = [profile] // Mock pre-loaded state
+    func test_start_emptyCacheOffline_showsLoadFailure() async {
+        await repository.setBootstrapError(.offlineNoCache)
 
-        // Act
-        await viewModel.accept("1")
+        start()
+        await waitUntil("error surfaced") { self.viewModel.error == .offlineNoCache }
 
-        // Assert - ViewModel state is updated (Optimistic UI)
-        XCTAssertEqual(viewModel.profiles.first?.status, .accepted)
-        // Assert - Repository state is updated (Persistence)
-        XCTAssertEqual(mockRepository.storage["1"]?.status, .accepted)
+        XCTAssertTrue(viewModel.profiles.isEmpty)
+        XCTAssertEqual(viewModel.loadFailure, .offlineNoCache)
     }
 
-    func testOfflinePagination_SurfacesError_DoesNotCrash() async {
-        // Arrange
-        mockRepository.isReachable = false
-        mockRepository.shouldThrowError = .offlineNoMoreData
-        let profile = Profile.stub(id: "1", firstName: "John", lastName: "Doe")
-        viewModel.profiles = [profile]
+    // MARK: Pagination
 
-        // Act
-        await viewModel.loadNextPageIfNeeded(currentItem: profile)
+    func test_loadMore_appendsNextPageInOrder() async {
+        await repository.setPages([1: Profile.page(1, perPage: 3), 2: Profile.page(2, perPage: 3)])
 
-        // Assert
-        guard case .offlineNoMoreData = viewModel.error else {
-            XCTFail("Expected offlineNoMoreData error")
-            return
-        }
+        start()
+        await waitUntil { self.viewModel.profiles.count == 3 }
+
+        await viewModel.loadMoreIfNeeded(currentItem: viewModel.profiles.last!)
+        await waitUntil("second page appended") { self.viewModel.profiles.count == 6 }
+
+        XCTAssertEqual(viewModel.profiles.map(\.sortIndex), [0, 1, 2, 3, 4, 5])
     }
 
-    func testLoadInitial_OfflineWithNoCache_SurfacesNetworkError() async {
-        // Arrange
-        mockRepository.isReachable = false
-        mockRepository.storage = [:] // Guarantee empty cache
+    func test_loadMore_onlyTriggersForLastItem() async {
+        await repository.setPages([1: Profile.page(1, perPage: 3), 2: Profile.page(2, perPage: 3)])
 
-        // Act
-        await viewModel.loadInitial()
+        start()
+        await waitUntil { self.viewModel.profiles.count == 3 }
 
-        // Assert
-        XCTAssertTrue(viewModel.profiles.isEmpty) // Profiles must remain empty
+        await viewModel.loadMoreIfNeeded(currentItem: viewModel.profiles.first!)
 
-        guard case .network = viewModel.error else {
-            XCTFail("Expected network error to trigger the OfflineEmptyStateView")
-            return
-        }
+        let calls = await repository.loadNextPageCallCount
+        XCTAssertEqual(calls, 0)
     }
 
-    func testDecline_OptimisticallyUpdatesUI_ThenPersists() async {
-        // Arrange
-        let profile = Profile.stub(id: "1", firstName: "John", lastName: "Doe")
-        mockRepository.storage["1"] = profile
-        viewModel.profiles = [profile] // Mock pre-loaded state
+    func test_loadMore_offlinePastCache_surfacesEndOfCache_keepsList() async {
+        await repository.seed(Profile.page(1, perPage: 3), pagesAlreadyLoaded: 1)
+        await repository.setNextPageError(.endOfCache)
 
-        // Act
-        await viewModel.decline("1")
+        start()
+        await waitUntil { self.viewModel.profiles.count == 3 }
 
-        // Assert - ViewModel state is updated (Optimistic UI)
-        XCTAssertEqual(viewModel.profiles.first?.status, .declined)
-        // Assert - Repository state is updated (Persistence)
-        XCTAssertEqual(mockRepository.storage["1"]?.status, .declined)
+        await viewModel.loadMoreIfNeeded(currentItem: viewModel.profiles.last!)
+
+        XCTAssertEqual(viewModel.error, .endOfCache)
+        XCTAssertEqual(viewModel.profiles.count, 3, "list stays visible")
     }
 
-    func testUpdateStatus_Failure_RollsBackToPreviousState() async {
-        // Arrange
-        let profile = Profile.stub(id: "1", firstName: "John", lastName: "Doe")
-        mockRepository.storage["1"] = profile
-        viewModel.profiles = [profile] // Mock pre-loaded state
+    // MARK: Optimistic status
 
-        // Force the persistence layer to fail
-        mockRepository.shouldThrowError = .persistence(NSError(domain: "Test", code: 1))
+    func test_accept_updatesImmediatelyAndPersists() async {
+        await repository.seed([Profile.stub(id: "7", status: .pending)])
 
-        // Act
-        await viewModel.accept("1")
+        start()
+        await waitUntil { self.viewModel.profiles.count == 1 }
 
-        // Assert - UI State rolls back to pending instead of getting stuck on accepted
-        XCTAssertEqual(viewModel.profiles.first?.status, .pending)
-        // Assert - Error surfaced to be displayed in the ErrorBannerView
-        XCTAssertNotNil(viewModel.error)
+        await viewModel.accept("7")
+        await waitUntil("status reflected") { self.viewModel.profiles.first?.status == .accepted }
+
+        let updates = await repository.statusUpdates
+        XCTAssertEqual(updates.map(\.status), [.accepted])
     }
 
-    func testLoadInitial_WithWarmCache_ResumesFromCorrectPage() async {
-        // Arrange: simulate a previous session that had already reached page 3
-        let page1 = [Profile.stub(id: "1", firstName: "A")]
-        let page3 = [Profile.stub(id: "3", firstName: "X")]
-        mockRepository.remotePages[1] = page1
-        mockRepository.remotePages[3] = page3
-        _ = try! await mockRepository.loadPage(1)
-        _ = try! await mockRepository.loadPage(3)   // simulates prior session reaching page 3
-        XCTAssertEqual(mockRepository.storage.count, 2)
+    func test_updateStatus_failure_rollsBackAndSurfacesError() async {
+        await repository.seed([Profile.stub(id: "7", status: .pending)])
+        await repository.setUpdateStatusError(.persistence)
 
-        let page4 = [Profile(id: "4", firstName: "M", lastName: "N", age: 22, city: "C", state: "D", country: "E", email: "F", phone: "G", nationality: "H", registeredDate: Date(), thumbnailURL: nil, largePhotoURL: nil, status: .pending)]
-        mockRepository.remotePages[4] = page4   // the page that SHOULD get requested next
+        start()
+        await waitUntil { self.viewModel.profiles.count == 1 }
 
-        // Act: fresh ViewModel picks up the "warm" mock repository
-        await viewModel.loadInitial()
-        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.profiles.last!)
+        await viewModel.decline("7")
+        await waitUntil("rolled back") { self.viewModel.profiles.first?.status == .pending }
 
-        // Assert: should have requested page 4, not page 2
-        XCTAssertTrue(viewModel.profiles.contains(where: { $0.id == "4" }))
+        XCTAssertEqual(viewModel.error, .persistence)
+    }
+
+    // MARK: Live sync
+
+    func test_statusChangedOutsideViewModel_propagatesIntoList() async {
+        await repository.seed([Profile.stub(id: "7", status: .pending)])
+
+        start()
+        await waitUntil { self.viewModel.profiles.count == 1 }
+
+        // Simulates the detail screen (or any other observer) making the change.
+        try? await repository.updateStatus(id: "7", to: .accepted)
+
+        await waitUntil("list self-corrects") { self.viewModel.profiles.first?.status == .accepted }
+    }
+
+    // MARK: Connectivity
+
+    func test_connectivityStream_togglesOfflineFlag() async {
+        await repository.seed(Profile.page(1, perPage: 1))
+
+        start()
+        await waitUntil { !self.viewModel.profiles.isEmpty }
+        XCTAssertFalse(viewModel.isOffline)
+
+        await repository.setConnected(false)
+        await waitUntil("offline flag set") { self.viewModel.isOffline }
+
+        await repository.setConnected(true)
+        await waitUntil("offline flag cleared") { !self.viewModel.isOffline }
+    }
+
+    func test_refresh_forwardsToRepository() async {
+        await repository.seed(Profile.page(1, perPage: 1))
+
+        start()
+        await viewModel.refresh()
+
+        let count = await repository.refreshCallCount
+        XCTAssertEqual(count, 1)
     }
 }
