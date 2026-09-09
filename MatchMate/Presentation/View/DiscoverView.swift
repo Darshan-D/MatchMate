@@ -127,7 +127,7 @@ struct DiscoverView: View {
     }
 
     private var deck: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 10) {
             SwipeDeck(
                 profiles: viewModel.deck,
                 command: $command,
@@ -136,8 +136,8 @@ struct DiscoverView: View {
                 },
                 onTap: { profile in path.append(Route.detail(profile.id)) }
             )
-            .padding(.horizontal, 28)
-            .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, 24)
+            .layoutPriority(1)
 
             DeckControls(
                 canUndo: viewModel.canUndo,
@@ -146,10 +146,9 @@ struct DiscoverView: View {
                 onUndo: { Task { await viewModel.undo() } },
                 onLike: { command = .like }
             )
-            .padding(.top, 6)
-            .padding(.bottom, 12)
+            .padding(.bottom, 10)
         }
-        .padding(.top, 6)
+        .padding(.top, 8)
     }
 
     private var loading: some View {

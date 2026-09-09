@@ -26,7 +26,8 @@ struct SwipeDeck: View {
 
     private let depth = 3
     private let swipeThreshold: CGFloat = 100
-    private let ratio: CGFloat = 0.74
+    /// Card width : height. Portrait, close to a playing card.
+    private let ratio: CGFloat = 0.66
 
     @State private var drag: CGSize = .zero
     /// Cards mid-flight, keyed by id, with the translation they're exiting toward.
@@ -36,8 +37,10 @@ struct SwipeDeck: View {
 
     var body: some View {
         GeometryReader { geo in
-            let width = geo.size.width
-            let height = min(geo.size.height, width / ratio)
+            // Fill the box the parent gives us: as tall as possible, width follows the ratio,
+            // never wider than the box. Whatever slack remains is split evenly top/bottom.
+            let width = min(geo.size.width, geo.size.height * ratio)
+            let height = width / ratio
 
             ZStack {
                 ForEach(Array(visible.enumerated()), id: \.element.id) { pair in
@@ -47,7 +50,6 @@ struct SwipeDeck: View {
             .frame(width: geo.size.width, height: geo.size.height)
             .animation(.spring(response: 0.42, dampingFraction: 0.78), value: profiles.map(\.id))
         }
-        .aspectRatio(ratio, contentMode: .fit)
         .onChange(of: profiles.map(\.id)) { _, ids in
             for key in Array(exiting.keys) where !ids.contains(key) {
                 exiting.removeValue(forKey: key)
