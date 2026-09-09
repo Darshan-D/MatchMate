@@ -21,30 +21,19 @@ extension Color {
 /// UI adapts to light and dark automatically.
 enum Palette {
     static let rose = Color(hex: 0xE35D74)
-    static let peach = Color(hex: 0xF0A93B)
+    static let amber = Color(hex: 0xF0A93B)
     static let emerald = Color(hex: 0x1FA97B)
     static let slate = Color(hex: 0x7C7F8A)
-    static let amber = Color(hex: 0xF0A93B)
     static let plum = Color(hex: 0x5E2E50)
 
+    private static func gradient(_ colors: [Color]) -> LinearGradient {
+        LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
     /// Primary call-to-action / accent gradient.
-    static let brand = LinearGradient(
-        colors: [rose, peach],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let likeGradient = LinearGradient(
-        colors: [emerald, Color(hex: 0x63C9A4)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let passGradient = LinearGradient(
-        colors: [Color(hex: 0x9AA0A6), Color(hex: 0x6B7076)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static let brand = gradient([rose, amber])
+    static let likeGradient = gradient([emerald, Color(hex: 0x63C9A4)])
+    static let passGradient = gradient([slate.opacity(0.95), Color(hex: 0x6B7076)])
 
     /// Warm ambient background behind every screen.
     static func canvas(_ scheme: ColorScheme) -> LinearGradient {

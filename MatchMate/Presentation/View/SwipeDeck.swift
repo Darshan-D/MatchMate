@@ -7,8 +7,6 @@ import SwiftUI
 
 enum SwipeDecision: Equatable {
     case like, pass
-
-    var status: MatchStatus { self == .like ? .accepted : .declined }
 }
 
 /// A Tinder-style card stack. Renders up to `depth` cards, the front one draggable. A drag past

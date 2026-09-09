@@ -6,13 +6,9 @@
 import Foundation
 import os
 
-/// Knows how to turn a page number into a Random User request. Endpoint-specific; transport and
-/// error mapping live in `HTTPClient`.
-protocol RemoteProfileDataSource: Sendable {
-    func fetchPage(_ page: Int) async throws -> RandomUserResponse
-}
-
-struct RandomUserRemoteDataSource: RemoteProfileDataSource {
+/// Turns a page number into a Random User request. Endpoint-specific; transport and error
+/// mapping live in the injected `HTTPClient` (which is the test seam).
+struct RandomUserRemoteDataSource: Sendable {
     private let client: HTTPClient
     private let config: APIConfig
 

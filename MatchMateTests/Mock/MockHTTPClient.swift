@@ -6,15 +6,12 @@
 import Foundation
 @testable import MatchMate
 
-/// Returns canned JSON (or errors) per requested page, and records the URLs it was asked for.
+/// Returns canned JSON (or errors) per requested `page` query value.
 final class MockHTTPClient: HTTPClient, @unchecked Sendable {
-    /// Keyed by the `page` query-item value.
     var responsesByPage: [String: Result<Data, AppError>] = [:]
     var defaultResult: Result<Data, AppError> = .failure(.connectivity)
-    private(set) var requestedURLs: [URL] = []
 
     func get<T>(_ url: URL) async throws -> T where T: Decodable & Sendable {
-        requestedURLs.append(url)
         let page = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first { $0.name == "page" }?.value ?? ""
         let result = responsesByPage[page] ?? defaultResult

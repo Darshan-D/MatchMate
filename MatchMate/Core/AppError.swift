@@ -10,6 +10,13 @@ import Foundation
 /// Lower layers throw their own concrete errors (`URLError`, `DecodingError`, SwiftData errors);
 /// the data layer maps them onto these cases so the UI only ever switches over one enum.
 enum AppError: Error, LocalizedError, Equatable {
+
+    /// Any error becomes an `AppError`: pass one through untouched, treat anything else as a
+    /// local persistence failure (the only non-mapped source that reaches a view model).
+    init(_ error: Error) {
+        self = (error as? AppError) ?? .persistence
+    }
+
     /// No usable network connection (URLSession failure, offline).
     case connectivity
     /// Server asked us to back off (HTTP 429).
@@ -41,23 +48,6 @@ enum AppError: Error, LocalizedError, Equatable {
             return "You're offline and there are no saved profiles yet."
         case .endOfCache:
             return "You're offline — that's all the profiles saved on this device."
-        }
-    }
-
-    /// Case-identity equality. The wrapped underlying errors are not compared.
-    static func == (lhs: AppError, rhs: AppError) -> Bool {
-        switch (lhs, rhs) {
-        case (.connectivity, .connectivity),
-             (.rateLimited, .rateLimited),
-             (.decoding, .decoding),
-             (.persistence, .persistence),
-             (.offlineNoCache, .offlineNoCache),
-             (.endOfCache, .endOfCache):
-            return true
-        case (.server(let a), .server(let b)):
-            return a == b
-        default:
-            return false
         }
     }
 }

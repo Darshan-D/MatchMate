@@ -1,14 +1,16 @@
 //
-//  MatchListViewModel.swift
+//  DiscoverViewModel.swift
 //  MatchMate
 //
 
 import Foundation
 import Observation
 
+/// Backs the Discover swipe deck and the Your Decisions list — they share one instance, so a
+/// decision made on either is reflected on the other through the same stream.
 @MainActor
 @Observable
-final class MatchListViewModel {
+final class DiscoverViewModel {
 
     private(set) var profiles: [Profile] = []
     private(set) var isLoadingInitial = false
@@ -30,8 +32,8 @@ final class MatchListViewModel {
 
     // MARK: - Derived state
 
-    /// Profiles still awaiting a decision — the swipe deck's queue. A just-undone card floats
-    /// back to the front so "undo" actually returns you to that person.
+    /// Profiles still awaiting a decision — the deck's queue. A just-undone card floats back to
+    /// the front so "undo" actually returns you to that person.
     var deck: [Profile] {
         var pending = profiles.filter { $0.status == .pending }
         if let resurfacedID, let index = pending.firstIndex(where: { $0.id == resurfacedID }) {
@@ -40,17 +42,18 @@ final class MatchListViewModel {
         return pending
     }
 
+    /// Decided profiles, most recent first.
     var decided: [Profile] {
         profiles.filter { $0.status != .pending }.sorted { $0.sortIndex > $1.sortIndex }
     }
 
-    var acceptedCount: Int { profiles.lazy.filter { $0.status == .accepted }.count }
-    var declinedCount: Int { profiles.lazy.filter { $0.status == .declined }.count }
+    var acceptedCount: Int { profiles.filter { $0.status == .accepted }.count }
+    var declinedCount: Int { profiles.filter { $0.status == .declined }.count }
     var canUndo: Bool { lastDecisionID != nil }
 
     /// Non-nil when the first load produced nothing to show — drives the full-screen retry state.
     var loadFailure: AppError? {
-        guard profiles.isEmpty, !isLoadingInitial, let error else { return nil }
+        guard profiles.isEmpty, !isLoadingInitial else { return nil }
         return error
     }
 
@@ -81,22 +84,13 @@ final class MatchListViewModel {
         await run { try await repository.refresh() }
     }
 
-    // MARK: - Pagination
-
     /// Called as the deck is consumed. Fetches the next page while the pile is running low.
     func loadMoreIfNeeded() async {
         guard !isLoadingMore, !reachedEndOfCache, deck.count <= 4 else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
-        do {
-            try await repository.loadNextPage()
-            error = nil
-        } catch AppError.endOfCache {
-            reachedEndOfCache = true
-            error = .endOfCache
-        } catch {
-            self.error = (error as? AppError) ?? .persistence
-        }
+        await run { try await repository.loadNextPage() }
+        if error == .endOfCache { reachedEndOfCache = true }
     }
 
     // MARK: - Decisions
@@ -150,7 +144,7 @@ final class MatchListViewModel {
             try await operation()
             error = nil
         } catch {
-            self.error = (error as? AppError) ?? .persistence
+            self.error = AppError(error)
         }
     }
 }

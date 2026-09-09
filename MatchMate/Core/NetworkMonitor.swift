@@ -32,13 +32,11 @@ final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "MatchMate.NetworkMonitor")
 
-    init(startImmediately: Bool = true) {
+    init() {
         monitor.pathUpdateHandler = { [weak self] path in
             self?.handle(path.status == .satisfied)
         }
-        if startImmediately {
-            monitor.start(queue: queue)
-        }
+        monitor.start(queue: queue)
     }
 
     deinit {

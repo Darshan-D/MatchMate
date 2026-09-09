@@ -22,15 +22,7 @@ struct MatchMateApp: App {
 
     var body: some Scene {
         WindowGroup {
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-uiScreen") {
-                DevRoot(environment: environment)
-            } else {
-                DiscoverView(viewModel: environment.makeListViewModel(), environment: environment)
-            }
-            #else
-            DiscoverView(viewModel: environment.makeListViewModel(), environment: environment)
-            #endif
+            DiscoverView(viewModel: environment.makeDiscoverViewModel(), environment: environment)
         }
         .modelContainer(container)
     }

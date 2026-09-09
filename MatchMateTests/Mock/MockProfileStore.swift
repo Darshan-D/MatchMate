@@ -10,9 +10,7 @@ import Foundation
 /// `upsert` never overwrites `status`; reads come back sorted by `sortIndex`.
 actor MockProfileStore: ProfilePersisting {
     private var storage: [String: Profile] = [:]
-    var upsertError: AppError?
     var updateStatusError: AppError?
-    private(set) var upsertCallCount = 0
 
     init(seed: [Profile] = []) {
         for profile in seed { storage[profile.id] = profile }
@@ -27,8 +25,6 @@ actor MockProfileStore: ProfilePersisting {
     }
 
     func upsert(_ profiles: [Profile]) async throws {
-        upsertCallCount += 1
-        if let upsertError { throw upsertError }
         for incoming in profiles {
             if var existing = storage[incoming.id] {
                 let keptStatus = existing.status
@@ -52,6 +48,5 @@ actor MockProfileStore: ProfilePersisting {
         return maxIndex / resultsPerPage + 1
     }
 
-    func setUpsertError(_ error: AppError?) { upsertError = error }
     func setUpdateStatusError(_ error: AppError?) { updateStatusError = error }
 }

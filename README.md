@@ -57,7 +57,7 @@ SwiftUI Views ─▶ @MainActor @Observable ViewModels ─▶ ProfileRepository 
   - `ProfileStore` — a `@ModelActor`, so every SwiftData read/write runs on its own executor, never
     the main thread. Exposes only domain types; `ProfileEntity` / `ModelContext` never leak out.
   - `ProfileRepositoryImpl` — an `actor` that owns the single source of truth (see below).
-- **Presentation** — `MatchListViewModel` (Discover + Your Decisions share it) and
+- **Presentation** — `DiscoverViewModel` (Discover + Your Decisions share it) and
   `MatchDetailViewModel`, both `@Observable`, depending only on `ProfileRepository`. They hold view
   state and consume streams; no persistence or networking types in sight. The swipe deck
   (`SwipeDeck` / `ProfileDeckCard`), theming (`Palette`), and haptics are pure view concerns.
@@ -134,7 +134,7 @@ SwiftData all run off the main thread — `URLSessionHTTPClient` is a plain `Sen
 
 `xcodebuild test` runs ~42 tests across:
 
-- **`MatchListViewModelTests` / `MatchDetailViewModelTests`** — initial load, deck refills as it
+- **`DiscoverViewModelTests` / `MatchDetailViewModelTests`** — initial load, deck refills as it
   runs low, ordering, optimistic accept/decline + rollback, `undo` returning a card to the front,
   deck/decided split, offline empty state, end-of-cache, connectivity toggling, and **live
   cross-screen sync** (a status change made outside the view model propagates in).
@@ -166,9 +166,6 @@ smaller framed copy rather than stretching one blocky image edge to edge.
 - `refresh()` re-fetches all previously-loaded pages sequentially. Fine for the expected data
   volume; not optimized for very deep lists.
 - No single-profile deep-linking — the detail screen is always reached from a loaded card/row.
-- `AppError` equality compares case identity, not the wrapped underlying error.
-- `DevRoot` is a DEBUG-only launch router (`-uiScreen detail|decisions`) for inspecting screens in
-  isolation; it is inert in release builds and in a normal debug run.
 
 ## Hours
 

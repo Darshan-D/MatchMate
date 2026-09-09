@@ -1,5 +1,5 @@
 //
-//  MatchListViewModelTests.swift
+//  DiscoverViewModelTests.swift
 //  MatchMateTests
 //
 
@@ -7,15 +7,15 @@ import XCTest
 @testable import MatchMate
 
 @MainActor
-final class MatchListViewModelTests: XCTestCase {
+final class DiscoverViewModelTests: XCTestCase {
 
     private var repository: MockProfileRepository!
-    private var viewModel: MatchListViewModel!
+    private var viewModel: DiscoverViewModel!
 
     override func setUp() {
         super.setUp()
         repository = MockProfileRepository()
-        viewModel = MatchListViewModel(repository: repository)
+        viewModel = DiscoverViewModel(repository: repository)
     }
 
     private func start() {

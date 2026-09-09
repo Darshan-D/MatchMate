@@ -30,7 +30,7 @@ struct DeckControls: View {
                 fill: AnyShapeStyle(Color(.systemBackground)),
                 tint: Palette.amber,
                 border: Palette.amber.opacity(0.5),
-                shadow: Palette.amber.opacity(0.3),
+                shadow: Palette.amber,
                 action: onUndo
             )
             .disabled(!canUndo)
@@ -71,16 +71,7 @@ struct DeckControls: View {
                 .overlay(Circle().strokeBorder(border, lineWidth: 1.5))
                 .shadow(color: shadow.opacity(0.45), radius: 12, y: 6)
         }
-        .buttonStyle(PressBounceStyle())
-    }
-}
-
-/// Shared press feedback for round buttons.
-struct PressBounceStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.88 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.55), value: configuration.isPressed)
+        .buttonStyle(PressBounceStyle(pressedScale: 0.88))
     }
 }
 

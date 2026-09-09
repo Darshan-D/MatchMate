@@ -12,10 +12,6 @@ enum Haptics {
         UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
 
-    static func notify(_ type: UINotificationFeedbackGenerator.FeedbackType) {
-        UINotificationFeedbackGenerator().notificationOccurred(type)
-    }
-
     static func selection() {
         UISelectionFeedbackGenerator().selectionChanged()
     }

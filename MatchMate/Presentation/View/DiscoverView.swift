@@ -5,22 +5,23 @@
 
 import SwiftUI
 
+/// Navigation targets within the Discover flow.
+enum Route: Hashable {
+    case detail(String)
+    case decisions
+}
+
 @MainActor
 struct DiscoverView: View {
-    @State private var viewModel: MatchListViewModel
+    @State private var viewModel: DiscoverViewModel
     @State private var path = NavigationPath()
     @State private var command: SwipeDecision?
     @Environment(\.colorScheme) private var scheme
     private let environment: AppEnvironment
 
-    init(viewModel: MatchListViewModel, environment: AppEnvironment) {
+    init(viewModel: DiscoverViewModel, environment: AppEnvironment) {
         _viewModel = State(initialValue: viewModel)
         self.environment = environment
-    }
-
-    enum Route: Hashable {
-        case detail(String)
-        case decisions
     }
 
     var body: some View {
@@ -49,7 +50,7 @@ struct DiscoverView: View {
                 case .detail(let id):
                     MatchDetailView(viewModel: environment.makeDetailViewModel(id: id))
                 case .decisions:
-                    DecisionsView(viewModel: viewModel, environment: environment)
+                    DecisionsView(viewModel: viewModel)
                 }
             }
             .task { await viewModel.start() }
@@ -132,7 +133,12 @@ struct DiscoverView: View {
                 profiles: viewModel.deck,
                 command: $command,
                 onDecision: { profile, decision in
-                    Task { await viewModel.decide(profile.id, decision) }
+                    Task {
+                        switch decision {
+                        case .like: await viewModel.accept(profile.id)
+                        case .pass: await viewModel.decline(profile.id)
+                        }
+                    }
                 },
                 onTap: { profile in path.append(Route.detail(profile.id)) }
             )
@@ -159,17 +165,6 @@ struct DiscoverView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-// MARK: - Bridge for SwipeDecision → view model
-
-extension MatchListViewModel {
-    func decide(_ id: String, _ decision: SwipeDecision) async {
-        switch decision {
-        case .like: await accept(id)
-        case .pass: await decline(id)
-        }
     }
 }
 
@@ -220,11 +215,11 @@ private struct DeckEmptyView: View {
 #if DEBUG
 #Preview("Deck") {
     let env = AppEnvironment(repository: PreviewProfileRepository())
-    return DiscoverView(viewModel: env.makeListViewModel(), environment: env)
+    return DiscoverView(viewModel: env.makeDiscoverViewModel(), environment: env)
 }
 
 #Preview("Cold offline") {
     let env = AppEnvironment(repository: PreviewProfileRepository(profiles: [], bootstrapError: .offlineNoCache))
-    return DiscoverView(viewModel: env.makeListViewModel(), environment: env)
+    return DiscoverView(viewModel: env.makeDiscoverViewModel(), environment: env)
 }
 #endif

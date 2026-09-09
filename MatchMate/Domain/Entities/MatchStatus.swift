@@ -3,9 +3,7 @@
 //  MatchMate
 //
 
-import Foundation
-
-enum MatchStatus: String, Codable, Sendable, CaseIterable {
+enum MatchStatus: String, Sendable {
     case pending
     case accepted
     case declined

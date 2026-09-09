@@ -31,17 +31,17 @@
 			membershipExceptions = (
 				Data/HTTPClientTests.swift,
 				Data/ProfileDTOMappingTests.swift,
-				Data/ProfileEntityIntegrationTests.swift,
+				Data/ProfileStoreTests.swift,
 				Data/ProfileRepositoryImplTests.swift,
-				"Fixtures/AsyncTestSupport.swift",
+				Fixtures/AsyncTestSupport.swift,
 				"Fixtures/Profile+Fixtures.swift",
 				Fixtures/URLProtocolStub.swift,
 				Mock/MockHTTPClient.swift,
 				Mock/MockNetworkMonitor.swift,
 				Mock/MockProfileRepository.swift,
 				Mock/MockProfileStore.swift,
+				Presentation/DiscoverViewModelTests.swift,
 				Presentation/MatchDetailViewModelTests.swift,
-				Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9C3303EEFD100357B39 /* MatchMate */;
 		};
@@ -50,17 +50,17 @@
 			membershipExceptions = (
 				Data/HTTPClientTests.swift,
 				Data/ProfileDTOMappingTests.swift,
-				Data/ProfileEntityIntegrationTests.swift,
+				Data/ProfileStoreTests.swift,
 				Data/ProfileRepositoryImplTests.swift,
-				"Fixtures/AsyncTestSupport.swift",
+				Fixtures/AsyncTestSupport.swift,
 				"Fixtures/Profile+Fixtures.swift",
 				Fixtures/URLProtocolStub.swift,
 				Mock/MockHTTPClient.swift,
 				Mock/MockNetworkMonitor.swift,
 				Mock/MockProfileRepository.swift,
 				Mock/MockProfileStore.swift,
+				Presentation/DiscoverViewModelTests.swift,
 				Presentation/MatchDetailViewModelTests.swift,
-				Presentation/MatchListViewModelTests.swift,
 			);
 			target = 7D61D9D2303EEFD200357B39 /* MatchMateTests */;
 		};

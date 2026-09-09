@@ -60,10 +60,10 @@ struct URLSessionHTTPClient: HTTPClient {
 extension URLSession {
     /// Fails fast instead of parking requests when offline — the repository wants a quick failure
     /// so it can fall back to the cache.
-    static var matchMateDefault: URLSession {
+    static let matchMateDefault: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
         config.waitsForConnectivity = false
         return URLSession(configuration: config)
-    }
+    }()
 }

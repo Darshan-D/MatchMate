@@ -11,57 +11,65 @@ import SwiftData
 @Model
 final class ProfileEntity {
     @Attribute(.unique) var id: String
-    var firstName: String
-    var lastName: String
-    var age: Int
-    var city: String
-    var state: String
-    var country: String
-    var email: String
-    var phone: String
-    var nationality: String
+    var firstName: String = ""
+    var lastName: String = ""
+    var age: Int = 0
+    var city: String = ""
+    var state: String = ""
+    var country: String = ""
+    var email: String = ""
+    var phone: String = ""
+    var nationality: String = ""
     var registeredDate: Date?
     var thumbnailURLString: String?
     var largePhotoURLString: String?
-    var statusRaw: String
-    var sortIndex: Int
+    var statusRaw: String = MatchStatus.pending.rawValue
+    var sortIndex: Int = 0
 
     var status: MatchStatus {
         get { MatchStatus(rawValue: statusRaw) ?? .pending }
         set { statusRaw = newValue.rawValue }
     }
 
-    init(
-        id: String,
-        firstName: String,
-        lastName: String,
-        age: Int,
-        city: String,
-        state: String,
-        country: String,
-        email: String,
-        phone: String,
-        nationality: String,
-        registeredDate: Date?,
-        thumbnailURLString: String?,
-        largePhotoURLString: String?,
-        statusRaw: String,
-        sortIndex: Int
-    ) {
+    init(id: String) {
         self.id = id
-        self.firstName = firstName
-        self.lastName = lastName
-        self.age = age
-        self.city = city
-        self.state = state
-        self.country = country
-        self.email = email
-        self.phone = phone
-        self.nationality = nationality
-        self.registeredDate = registeredDate
-        self.thumbnailURLString = thumbnailURLString
-        self.largePhotoURLString = largePhotoURLString
-        self.statusRaw = statusRaw
-        self.sortIndex = sortIndex
+    }
+
+    /// Copies every server-owned field from a domain value. Deliberately leaves `status`
+    /// untouched — a local Accept/Decline always wins over a re-fetched row.
+    func apply(_ profile: Profile) {
+        firstName = profile.firstName
+        lastName = profile.lastName
+        age = profile.age
+        city = profile.city
+        state = profile.state
+        country = profile.country
+        email = profile.email
+        phone = profile.phone
+        nationality = profile.nationality
+        registeredDate = profile.registeredDate
+        thumbnailURLString = profile.thumbnailURL?.absoluteString
+        largePhotoURLString = profile.largePhotoURL?.absoluteString
+        sortIndex = profile.sortIndex
+    }
+
+    var domain: Profile {
+        Profile(
+            id: id,
+            firstName: firstName,
+            lastName: lastName,
+            age: age,
+            city: city,
+            state: state,
+            country: country,
+            email: email,
+            phone: phone,
+            nationality: nationality,
+            registeredDate: registeredDate,
+            thumbnailURL: thumbnailURLString.flatMap(URL.init(string:)),
+            largePhotoURL: largePhotoURLString.flatMap(URL.init(string:)),
+            sortIndex: sortIndex,
+            status: status
+        )
     }
 }

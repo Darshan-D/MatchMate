@@ -31,8 +31,8 @@ final class AppEnvironment {
         self.repository = repository
     }
 
-    func makeListViewModel() -> MatchListViewModel {
-        MatchListViewModel(repository: repository)
+    func makeDiscoverViewModel() -> DiscoverViewModel {
+        DiscoverViewModel(repository: repository)
     }
 
     func makeDetailViewModel(id: String) -> MatchDetailViewModel {

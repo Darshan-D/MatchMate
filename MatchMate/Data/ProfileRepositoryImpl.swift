@@ -14,7 +14,7 @@ import os
 /// behind it; the network is tried first and falls back to cache when offline.
 actor ProfileRepositoryImpl: ProfileRepository {
 
-    private let remote: RemoteProfileDataSource
+    private let remote: RandomUserRemoteDataSource
     private let store: ProfilePersisting
     private let monitor: NetworkMonitoring
     private let config: APIConfig
@@ -26,7 +26,7 @@ actor ProfileRepositoryImpl: ProfileRepository {
     private var didBootstrap = false
 
     init(
-        remote: RemoteProfileDataSource,
+        remote: RandomUserRemoteDataSource,
         store: ProfilePersisting,
         monitor: NetworkMonitoring,
         config: APIConfig = .live
@@ -85,9 +85,8 @@ actor ProfileRepositoryImpl: ProfileRepository {
             do {
                 try await fetchMergePersist(page: 1)
                 nextPage = 2
-            } catch let error as AppError {
-                if case .connectivity = error { throw AppError.offlineNoCache }
-                throw error
+            } catch AppError.connectivity {
+                throw AppError.offlineNoCache
             }
         }
 
@@ -112,11 +111,8 @@ actor ProfileRepositoryImpl: ProfileRepository {
         do {
             try await fetchMergePersist(page: nextPage)
             nextPage += 1
-        } catch let error as AppError {
-            if case .connectivity = error, !current.isEmpty {
-                throw AppError.endOfCache
-            }
-            throw error
+        } catch AppError.connectivity where !current.isEmpty {
+            throw AppError.endOfCache
         }
     }
 
@@ -174,11 +170,9 @@ actor ProfileRepositoryImpl: ProfileRepository {
     }
 
     private static func merge(existing: [Profile], fetched: [Profile]) -> [Profile] {
-        var byID = Dictionary(existing.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var byID = Dictionary(existing.map { ($0.id, $0) }) { first, _ in first }
         for var incoming in fetched {
-            if let old = byID[incoming.id] {
-                incoming.status = old.status // local decision always wins
-            }
+            incoming.status = byID[incoming.id]?.status ?? incoming.status // local decision wins
             byID[incoming.id] = incoming
         }
         return byID.values.sorted { $0.sortIndex < $1.sortIndex }

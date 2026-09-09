@@ -14,12 +14,10 @@ actor MockProfileRepository: ProfileRepository {
     var pages: [Int: [Profile]] = [:]
     var bootstrapError: AppError?
     var nextPageError: AppError?
-    var refreshError: AppError?
     var updateStatusError: AppError?
     private(set) var connected = true
 
     // Call recording
-    private(set) var bootstrapCallCount = 0
     private(set) var loadNextPageCallCount = 0
     private(set) var refreshCallCount = 0
     private(set) var statusUpdates: [(id: String, status: MatchStatus)] = []
@@ -53,7 +51,6 @@ actor MockProfileRepository: ProfileRepository {
     }
 
     func bootstrap() async throws {
-        bootstrapCallCount += 1
         if let bootstrapError { throw bootstrapError }
         if current.isEmpty, let first = pages[1] {
             current = first.sorted { $0.sortIndex < $1.sortIndex }
@@ -74,7 +71,6 @@ actor MockProfileRepository: ProfileRepository {
 
     func refresh() async throws {
         refreshCallCount += 1
-        if let refreshError { throw refreshError }
         emitProfiles()
     }
 
@@ -106,15 +102,12 @@ actor MockProfileRepository: ProfileRepository {
     func setPages(_ pages: [Int: [Profile]]) { self.pages = pages }
     func setBootstrapError(_ error: AppError?) { bootstrapError = error }
     func setNextPageError(_ error: AppError?) { nextPageError = error }
-    func setRefreshError(_ error: AppError?) { refreshError = error }
     func setUpdateStatusError(_ error: AppError?) { updateStatusError = error }
 
     func setConnected(_ value: Bool) {
         connected = value
         for continuation in connectivityContinuations.values { continuation.yield(value) }
     }
-
-    func snapshot() -> [Profile] { current }
 
     // MARK: Internals
 

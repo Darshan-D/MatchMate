@@ -41,7 +41,7 @@ final class MatchDetailViewModel {
             try await repository.updateStatus(id: id, to: status)
             error = nil
         } catch {
-            self.error = (error as? AppError) ?? .persistence
+            self.error = AppError(error)
         }
     }
 }

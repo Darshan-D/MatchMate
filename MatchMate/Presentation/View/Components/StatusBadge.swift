@@ -11,19 +11,15 @@ struct StatusBadge: View {
     var compact = false
 
     var body: some View {
-        Label {
-            Text(status.label)
-        } icon: {
-            Image(systemName: status.symbol)
-        }
-        .font(compact ? .caption2.weight(.bold) : .footnote.weight(.bold))
-        .labelStyle(.titleAndIcon)
-        .foregroundStyle(Palette.tint(for: status))
-        .padding(.horizontal, compact ? 8 : 12)
-        .padding(.vertical, compact ? 4 : 7)
-        .background(Palette.tint(for: status).opacity(0.14), in: Capsule())
-        .overlay(Capsule().strokeBorder(Palette.tint(for: status).opacity(0.25), lineWidth: 1))
-        .accessibilityLabel("\(status.label)")
+        let tint = Palette.tint(for: status)
+        return Label(status.label, systemImage: status.symbol)
+            .font(compact ? .caption2.weight(.bold) : .footnote.weight(.bold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, compact ? 8 : 12)
+            .padding(.vertical, compact ? 4 : 7)
+            .background(tint.opacity(0.14), in: Capsule())
+            .overlay(Capsule().strokeBorder(tint.opacity(0.25), lineWidth: 1))
+            .accessibilityLabel(status.label)
     }
 }
 

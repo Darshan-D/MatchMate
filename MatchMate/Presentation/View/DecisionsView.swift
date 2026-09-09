@@ -11,8 +11,7 @@ import Kingfisher
 /// decision; tap to open the full profile.
 @MainActor
 struct DecisionsView: View {
-    let viewModel: MatchListViewModel
-    let environment: AppEnvironment
+    let viewModel: DiscoverViewModel
     @Environment(\.colorScheme) private var scheme
     @State private var filter: Filter = .all
 
@@ -57,7 +56,7 @@ struct DecisionsView: View {
         List {
             ForEach(rows) { profile in
                 ZStack {
-                    NavigationLink(value: DiscoverView.Route.detail(profile.id)) { EmptyView() }
+                    NavigationLink(value: Route.detail(profile.id)) { EmptyView() }
                         .opacity(0)
                     DecisionRow(profile: profile)
                 }
@@ -137,9 +136,8 @@ private struct DecisionRow: View {
 
 #if DEBUG
 #Preview {
-    let env = AppEnvironment(repository: PreviewProfileRepository())
-    return NavigationStack {
-        DecisionsView(viewModel: env.makeListViewModel(), environment: env)
-    }
+    let vm = AppEnvironment(repository: PreviewProfileRepository()).makeDiscoverViewModel()
+    return NavigationStack { DecisionsView(viewModel: vm) }
+        .task { await vm.start() }
 }
 #endif
