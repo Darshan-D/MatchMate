@@ -17,6 +17,7 @@ extension Profile {
         city: String = "Keswick",
         state: String = "Yukon",
         country: String = "Canada",
+        nationality: String = "CA",
         sortIndex: Int = 0,
         status: MatchStatus = .pending
     ) -> Profile {
@@ -29,8 +30,8 @@ extension Profile {
             state: state,
             country: country,
             email: "\(firstName.lowercased()).\(lastName.lowercased())@example.com",
-            phone: "555-0142",
-            nationality: "CA",
+            phone: "+1 555 0142",
+            nationality: nationality,
             registeredDate: Date(timeIntervalSince1970: 1_400_000_000),
             thumbnailURL: nil,
             largePhotoURL: nil,
@@ -39,14 +40,24 @@ extension Profile {
         )
     }
 
-    static func previewList(count: Int = 6) -> [Profile] {
-        (0..<count).map {
-            .preview(
-                firstName: ["Florence", "Maxime", "Nilton", "Adilson", "Ena", "Lena"][$0 % 6],
-                lastName: ["Gagné", "Smith", "da Luz", "Pultrum", "Ala", "Roy"][$0 % 6],
-                age: 30 + $0,
-                sortIndex: $0,
-                status: [.pending, .accepted, .declined][$0 % 3]
+    static func previewList(count: Int = 8) -> [Profile] {
+        let names: [(String, String, String, String)] = [
+            ("Florence", "Gagné", "Keswick", "CA"),
+            ("Maxime", "Smith", "Nunavut", "CA"),
+            ("Nilton", "da Luz", "Alagoas", "BR"),
+            ("Adilson", "Pultrum", "Drenthe", "NL"),
+            ("Ena", "Ala", "Ostrobothnia", "FI"),
+            ("Lena", "Roy", "Lyon", "FR"),
+            ("Youssef", "Haddad", "Cairo", "EG"),
+            ("Aiko", "Tanaka", "Osaka", "JP")
+        ]
+        return (0..<count).map { i in
+            let (first, last, city, nat) = names[i % names.count]
+            return .preview(
+                id: "preview-\(i)",
+                firstName: first, lastName: last, age: 27 + i, city: city,
+                nationality: nat, sortIndex: i,
+                status: i < max(count - 3, 1) ? .pending : (i % 2 == 0 ? .accepted : .declined)
             )
         }
     }

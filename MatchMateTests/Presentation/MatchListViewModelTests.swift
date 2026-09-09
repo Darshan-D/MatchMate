@@ -46,41 +46,42 @@ final class MatchListViewModelTests: XCTestCase {
 
     // MARK: Pagination
 
-    func test_loadMore_appendsNextPageInOrder() async {
+    func test_loadMore_fetchesNextPageWhenDeckRunsLow() async {
         await repository.setPages([1: Profile.page(1, perPage: 3), 2: Profile.page(2, perPage: 3)])
 
         start()
-        await waitUntil { self.viewModel.profiles.count == 3 }
+        await waitUntil { self.viewModel.deck.count == 3 }
 
-        await viewModel.loadMoreIfNeeded(currentItem: viewModel.profiles.last!)
-        await waitUntil("second page appended") { self.viewModel.profiles.count == 6 }
+        await viewModel.loadMoreIfNeeded()
+        await waitUntil("second page appended") { self.viewModel.deck.count == 6 }
 
         XCTAssertEqual(viewModel.profiles.map(\.sortIndex), [0, 1, 2, 3, 4, 5])
     }
 
-    func test_loadMore_onlyTriggersForLastItem() async {
-        await repository.setPages([1: Profile.page(1, perPage: 3), 2: Profile.page(2, perPage: 3)])
+    func test_loadMore_skipsWhenDeckIsHealthy() async {
+        await repository.setPages([1: Profile.page(1, perPage: 8), 2: Profile.page(2, perPage: 8)])
 
         start()
-        await waitUntil { self.viewModel.profiles.count == 3 }
+        await waitUntil { self.viewModel.deck.count == 8 }
 
-        await viewModel.loadMoreIfNeeded(currentItem: viewModel.profiles.first!)
+        await viewModel.loadMoreIfNeeded()
 
         let calls = await repository.loadNextPageCallCount
         XCTAssertEqual(calls, 0)
     }
 
-    func test_loadMore_offlinePastCache_surfacesEndOfCache_keepsList() async {
+    func test_loadMore_offlinePastCache_surfacesEndOfCache_keepsDeck() async {
         await repository.seed(Profile.page(1, perPage: 3), pagesAlreadyLoaded: 1)
         await repository.setNextPageError(.endOfCache)
 
         start()
-        await waitUntil { self.viewModel.profiles.count == 3 }
+        await waitUntil { self.viewModel.deck.count == 3 }
 
-        await viewModel.loadMoreIfNeeded(currentItem: viewModel.profiles.last!)
+        await viewModel.loadMoreIfNeeded()
 
         XCTAssertEqual(viewModel.error, .endOfCache)
-        XCTAssertEqual(viewModel.profiles.count, 3, "list stays visible")
+        XCTAssertTrue(viewModel.reachedEndOfCache)
+        XCTAssertEqual(viewModel.deck.count, 3, "deck stays visible")
     }
 
     // MARK: Optimistic status
@@ -109,6 +110,42 @@ final class MatchListViewModelTests: XCTestCase {
         await waitUntil("rolled back") { self.viewModel.profiles.first?.status == .pending }
 
         XCTAssertEqual(viewModel.error, .persistence)
+    }
+
+    func test_decision_splitsDeckAndDecided() async {
+        await repository.seed([
+            Profile.stub(id: "a", sortIndex: 0),
+            Profile.stub(id: "b", sortIndex: 1),
+            Profile.stub(id: "c", sortIndex: 2)
+        ])
+        start()
+        await waitUntil { self.viewModel.deck.count == 3 }
+
+        await viewModel.accept("a")
+        await viewModel.decline("b")
+        await waitUntil("deck shrinks") { self.viewModel.deck.count == 1 }
+
+        XCTAssertEqual(viewModel.deck.map(\.id), ["c"])
+        XCTAssertEqual(Set(viewModel.decided.map(\.id)), ["a", "b"])
+        XCTAssertEqual(viewModel.acceptedCount, 1)
+        XCTAssertEqual(viewModel.declinedCount, 1)
+    }
+
+    func test_undo_returnsProfileToFrontOfDeck() async {
+        await repository.seed([
+            Profile.stub(id: "a", sortIndex: 0),
+            Profile.stub(id: "b", sortIndex: 1)
+        ])
+        start()
+        await waitUntil { self.viewModel.deck.count == 2 }
+
+        await viewModel.accept("a")
+        await waitUntil { self.viewModel.deck.map(\.id) == ["b"] }
+        XCTAssertTrue(viewModel.canUndo)
+
+        await viewModel.undo()
+        await waitUntil("a comes back to the front") { self.viewModel.deck.map(\.id) == ["a", "b"] }
+        XCTAssertFalse(viewModel.canUndo, "cannot undo twice")
     }
 
     // MARK: Live sync

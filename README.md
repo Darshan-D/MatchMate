@@ -1,8 +1,19 @@
 # MatchMate
 
-A small matrimonial-style app: a paginated feed of profiles from the Random User API, with
-Accept / Decline from both the list and a full profile screen, offline support, and status that
-stays consistent everywhere. SwiftUI + SwiftData + MVVM over a reactive repository.
+A small matrimonial-style app: paginated profiles from the Random User API presented as a
+swipeable card deck, a full profile screen, and a reviewable list of every decision. Accept /
+Decline works from all three, offline, with status that stays consistent everywhere.
+SwiftUI + SwiftData + MVVM over a reactive repository.
+
+## Screens
+
+- **Discover** — a Tinder-style swipe deck. Drag right / tap ♥ to like, drag left / tap ✕ to
+  pass, undo the last call, tap a card for the full profile. Pagination refills the deck as it
+  runs low.
+- **Profile detail** — parallax hero, chips, contact details, and a Pass / Like bar that always
+  reflects (and can change) the current decision.
+- **Your Decisions** — a filterable list (All / Liked / Passed) of everyone decided on. Swipe a
+  row to flip the call; tap to open the profile.
 
 ## How to run
 
@@ -46,10 +57,12 @@ SwiftUI Views ─▶ @MainActor @Observable ViewModels ─▶ ProfileRepository 
   - `ProfileStore` — a `@ModelActor`, so every SwiftData read/write runs on its own executor, never
     the main thread. Exposes only domain types; `ProfileEntity` / `ModelContext` never leak out.
   - `ProfileRepositoryImpl` — an `actor` that owns the single source of truth (see below).
-- **Presentation** — two `@Observable` view models that depend only on `ProfileRepository`. They
-  hold view state and consume streams; no persistence or networking types in sight.
-- **Composition** — `AppEnvironment` builds the graph **once** and hands both view models the
-  **same** repository instance.
+- **Presentation** — `MatchListViewModel` (Discover + Your Decisions share it) and
+  `MatchDetailViewModel`, both `@Observable`, depending only on `ProfileRepository`. They hold view
+  state and consume streams; no persistence or networking types in sight. The swipe deck
+  (`SwipeDeck` / `ProfileDeckCard`), theming (`Palette`), and haptics are pure view concerns.
+- **Composition** — `AppEnvironment` builds the graph **once**; Discover and Your Decisions get
+  the **same** view-model instance so their streams are already in sync.
 
 There is no use-case layer: for an app this size each use case was a one-line pass-through, so the
 view models talk to the repository protocol directly. Pagination / merge / offline orchestration —
@@ -72,26 +85,27 @@ persistent store can't be opened, so a corrupt store degrades instead of crashin
 ### One source of truth, streamed
 
 `ProfileRepositoryImpl` keeps the canonical `[Profile]` in memory and publishes it as a broadcast
-`AsyncStream<[Profile]>`. Both screens subscribe to `repository.profiles()`:
+`AsyncStream<[Profile]>`. Every screen subscribes to `repository.profiles()` — the Discover deck
+takes the pending slice, Your Decisions takes the decided slice, and detail takes
+`first { $0.id == id }`.
 
-- the **list** renders the whole stream;
-- the **detail** screen renders `stream.first { $0.id == id }`.
-
-Because they read the *same* stream, they cannot disagree — there is no shared view model, no
-`.onAppear` re-read, no manual refresh, and it stays correct even with both screens visible
-(iPad split view). A status change emits **optimistically** (the in-memory list updates and
-broadcasts before the DB write); if persistence fails it reverts and re-emits, and the view model
-surfaces the error. One code path, fully unit-tested.
+Because they read the *same* stream they cannot disagree — no shared view model, no `.onAppear`
+re-read, no manual refresh, correct even with two screens visible at once. A status change emits
+**optimistically** (the in-memory list updates and broadcasts before the DB write); if persistence
+fails it reverts and re-emits, and the view model surfaces the error. One code path,
+unit-tested — including `undo`, which floats the just-decided profile back to the front of the deck.
 
 ### Pagination
 
 - `bootstrap()` loads the cache, emits it immediately (instant first paint), sets the paging
-  cursor to `highestCachedPage + 1`, and — if online — kicks a silent background `refresh()`.
-  If the cache is empty it fetches page 1; if that fails offline it reports `offlineNoCache` and
-  the list shows a full-screen retry state.
-- Scrolling to the last row calls `loadNextPage()`. The network is tried first; the page cursor is
-  advanced **only on success**, so a failed page never wedges pagination.
-- Offline, `loadNextPage()` reports `endOfCache` — the banner appears, the list stays visible.
+  cursor to `highestCachedPage + 1`, and — if it showed *stale* cache while online — kicks a
+  silent background `refresh()`. If the cache is empty it fetches page 1; if that fails offline it
+  reports `offlineNoCache` and Discover shows a full-screen retry state.
+- As the deck is consumed, `loadMoreIfNeeded()` fetches the next page while the pile is low
+  (≤ 4 cards). The network is tried first; the page cursor advances **only on success**, so a
+  failed page never wedges pagination.
+- Offline, `loadNextPage()` reports `endOfCache` — a toast appears, the deck keeps working
+  through what's cached.
 - Pull-to-refresh re-fetches every loaded page and merges server-side field changes while keeping
   local `status` and ordering.
 - Reconnecting (via `NWPathMonitor`) triggers a `refresh()` automatically.
@@ -106,7 +120,7 @@ surfaces the error. One code path, fully unit-tested.
 | Malformed response | `AppError.decoding`; cache still shown |
 | DB read/write failure | `AppError.persistence`; optimistic status change is rolled back |
 | Offline cold start, no cache | Full-screen retry state |
-| Scrolled past the cache offline | Inline banner, list stays put |
+| Scrolled past the cache offline | Toast, the deck keeps working through what's cached |
 
 ## Concurrency
 
@@ -118,11 +132,12 @@ SwiftData all run off the main thread — `URLSessionHTTPClient` is a plain `Sen
 
 ## Testing
 
-`xcodebuild test` runs ~40 tests across:
+`xcodebuild test` runs ~42 tests across:
 
-- **`MatchListViewModelTests` / `MatchDetailViewModelTests`** — initial load, pagination + ordering,
-  optimistic accept/decline + rollback, offline empty state, end-of-cache, connectivity toggling,
-  and **live cross-screen sync** (a status change made outside the view model propagates in).
+- **`MatchListViewModelTests` / `MatchDetailViewModelTests`** — initial load, deck refills as it
+  runs low, ordering, optimistic accept/decline + rollback, `undo` returning a card to the front,
+  deck/decided split, offline empty state, end-of-cache, connectivity toggling, and **live
+  cross-screen sync** (a status change made outside the view model propagates in).
 - **`ProfileRepositoryImplTests`** — the offline-fallback matrix, `sortIndex` assignment, merge
   preserving local status, the paging cursor not advancing on failure, optimistic-then-rollback
   emission order, and multi-subscriber broadcast. Uses a real `RandomUserRemoteDataSource` over a
@@ -142,13 +157,18 @@ mirror the real contracts — same ordering, same status-preservation semantics.
 profile image would re-download on a cold offline relaunch. Offline usability is a core
 requirement here, so images need to survive that too. `KFImage` caches to disk automatically.
 
+Random User photos top out at 128 px, so `RemotePhoto` composites a blurred fill behind a crisp,
+smaller framed copy rather than stretching one blocky image edge to edge.
+
 ## Known gaps
 
 - No SwiftData schema migration — `sortIndex` is a new field and a fresh install is assumed.
 - `refresh()` re-fetches all previously-loaded pages sequentially. Fine for the expected data
   volume; not optimized for very deep lists.
-- No single-profile deep-linking — the detail screen is always reached from a loaded list row.
+- No single-profile deep-linking — the detail screen is always reached from a loaded card/row.
 - `AppError` equality compares case identity, not the wrapped underlying error.
+- `DevRoot` is a DEBUG-only launch router (`-uiScreen detail|decisions`) for inspecting screens in
+  isolation; it is inert in release builds and in a normal debug run.
 
 ## Hours
 
