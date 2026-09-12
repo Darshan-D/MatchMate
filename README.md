@@ -21,8 +21,8 @@ repository as the single source of truth.
   </tr>
 </table>
 
-<!-- TODO: replace with the real demo video link -->
-**Demo video:** _coming soon_
+<!-- TODO: add the demo video — drop the file at docs/demo.mp4, or swap this link for a hosted video URL -->
+**Demo video:** [Watch the demo](docs/demo.mp4)
 
 ## Screens
 
