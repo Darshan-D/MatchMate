@@ -21,8 +21,7 @@ repository as the single source of truth.
   </tr>
 </table>
 
-<!-- TODO: add the demo video — drop the file at docs/demo.mp4, or swap the src for a hosted video URL -->
-<video src="docs/demo.mp4" controls width="300" poster="docs/screenshots/discover.png">
+<video src="https://github.com/user-attachments/assets/c7161c94-3c40-4944-a1fd-c76fa1b7a97d" controls width="300" poster="docs/screenshots/discover.png">
   Demo video — see docs/demo.mp4
 </video>
 
