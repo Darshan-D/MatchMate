@@ -1,9 +1,30 @@
 # MatchMate
 
-A small matrimonial-style app: paginated profiles from the Random User API presented as a
-swipeable card deck, a full profile screen, and a reviewable list of every decision. Accept /
-Decline works from all three, offline, with status that stays consistent everywhere.
-SwiftUI + SwiftData + MVVM over a reactive repository.
+![Swift](https://img.shields.io/badge/Swift-6-orange?logo=swift&logoColor=white)
+![Platform](https://img.shields.io/badge/iOS-17%2B-blue?logo=apple&logoColor=white)
+![SwiftData](https://img.shields.io/badge/Persistence-SwiftData-8A2BE2)
+![Architecture](https://img.shields.io/badge/Architecture-MVVM%20%2B%20Reactive%20Repository-informational)
+
+MatchMate is an iOS matchmaking app built around a Tinder-style swipe deck — browse paginated
+profiles from the Random User API, accept or decline with a swipe or a tap, and review every
+decision afterward. Every screen stays in sync in real time, and the app keeps working fully
+offline once data has been cached. Built with SwiftUI, SwiftData, and a reactive, actor-based
+repository as the single source of truth.
+
+## Quick Glance
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/discover.png" width="240" alt="Discover screen"/><br/><sub>Discover</sub></td>
+    <td align="center"><img src="docs/screenshots/detail.png" width="240" alt="Profile detail screen"/><br/><sub>Profile Detail</sub></td>
+    <td align="center"><img src="docs/screenshots/decisions.png" width="240" alt="Your Decisions screen"/><br/><sub>Your Decisions</sub></td>
+  </tr>
+</table>
+
+<!-- TODO: add the demo video — drop the file at docs/demo.mp4, or swap the src for a hosted video URL -->
+<video src="docs/demo.mp4" controls width="300" poster="docs/screenshots/discover.png">
+  Demo video — see docs/demo.mp4
+</video>
 
 ## Screens
 
@@ -167,19 +188,16 @@ smaller framed copy rather than stretching one blocky image edge to edge.
   volume; not optimized for very deep lists.
 - No single-profile deep-linking — the detail screen is always reached from a loaded card/row.
 
-## Hours
+## Manual QA
 
-~9 hours, including the rebuild from an earlier version.
+Detailed walkthroughs and results for the scenarios below are recorded in this
+[Google Drive folder](https://drive.google.com/drive/folders/15_QPq3KGBDeCac2FyycEQP_NjssuBXOA?usp=sharing).
 
-## Testing Details
-
-Detailed testing results for the following test cases are available in this [Google Drive link](https://drive.google.com/drive/folders/15_QPq3KGBDeCac2FyycEQP_NjssuBXOA?usp=sharing).
-
-### Test Cases
-
-* **Test Case 1: Pagination** — Pagination works as expected using an infinite-scroll approach.
-* **Test Case 2: UI Consistency** — The UI remains consistent between the main feed and the detailed profile view.
-* **Test Case 3: Data Persistence** — Profile status is persisted correctly after the app is terminated and reopened.
-* **Test Case 4: Airplane Mode** — The app displays cached data when the device is in Airplane Mode.
-* **Test Case 5: Cold Start** — When the app is launched for the first time without an internet connection and no cached data is available, it displays an error screen with a **Retry** button.
-* **Test Case 6: View Model Tests** — All ViewModel unit tests pass successfully.
+| # | Scenario | Result |
+|---|---|---|
+| 1 | **Pagination** — infinite scroll through the deck | Loads the next page as the pile runs low, no gaps or duplicates |
+| 2 | **UI consistency** — feed vs. detail view | Matching data and status between the main feed and the detailed profile view |
+| 3 | **Data persistence** — force-quit and relaunch | Profile status survives app termination |
+| 4 | **Airplane Mode** — offline browsing | Cached data renders with no network calls |
+| 5 | **Cold start offline** — first launch, no connectivity, no cache | Full-screen error state with a **Retry** button |
+| 6 | **View model unit tests** | All pass |
