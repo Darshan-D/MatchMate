@@ -2,130 +2,259 @@
 //  MatchDetailView.swift
 //  MatchMate
 //
-//  Created by Darshan Dodia on 26/08/26.
-//
 
 import SwiftUI
 import Kingfisher
 
+@MainActor
 struct MatchDetailView: View {
-    @State var viewModel: MatchDetailViewModel
+    @State private var viewModel: MatchDetailViewModel
+    @Environment(\.colorScheme) private var scheme
+
+    init(viewModel: MatchDetailViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
-        ScrollView {
+        ZStack {
+            Palette.canvas(scheme).ignoresSafeArea()
+
             if let profile = viewModel.profile {
-                VStack(spacing: 0) {
-                    // Hero Image with Gradient Fade
-                    ZStack(alignment: .bottom) {
-                        KFImage(profile.largePhotoURL)
-                            .placeholder { ProgressView() }
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 400)
-                            .clipped()
-
-                        LinearGradient(
-                            colors: [.clear, Color(.systemBackground)],
-                            startPoint: .center,
-                            endPoint: .bottom
-                        )
-                        .frame(height: 150)
-                    }
-
-                    VStack(spacing: 24) {
-                        VStack(spacing: 8) {
-                            Text("\(profile.firstName) \(profile.lastName), \(profile.age)")
-                                .font(.system(.largeTitle, design: .rounded))
-                                .fontWeight(.heavy)
-
-                            Text("\(profile.city), \(profile.country)")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
-                        }
-
-                        // Modern Info Cards
-                        VStack(spacing: 12) {
-                            detailRow(icon: "envelope.fill", color: .indigo, text: profile.email)
-                            detailRow(icon: "phone.fill", color: .green, text: profile.phone)
-                            detailRow(icon: "calendar.badge.clock", color: .orange, text: "Joined \(profile.registeredDate.formatted(date: .abbreviated, time: .omitted))")
-                        }
-                        .padding(.horizontal)
-
-                        // Dynamic Action Buttons
-                        HStack(spacing: 20) {
-                            if profile.status == .accepted {
-                                // Shrink 'Decline' to a small "X" on the left
-                                Button {
-                                    Task { await viewModel.decline() }
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                                .buttonStyle(DetailIconButtonStyle(color: .red, gradient: [.pink, .red]))
-
-                                // Expand 'Accept' to fill the rest
-                                Button("Accepted") {
-                                    Task { await viewModel.accept() }
-                                }
-                                .buttonStyle(ModernActionButtonStyle(color: .teal, isSelected: true))
-
-                            } else if profile.status == .declined {
-                                // Expand 'Decline' to fill the rest
-                                Button("Declined") {
-                                    Task { await viewModel.decline() }
-                                }
-                                .buttonStyle(ModernActionButtonStyle(color: .pink, isSelected: true))
-
-                                // Shrink 'Accept' to a small "heart" on the right
-                                Button {
-                                    Task { await viewModel.accept() }
-                                } label: {
-                                    Image(systemName: "heart.fill")
-                                }
-                                .buttonStyle(DetailIconButtonStyle(color: .green, gradient: [.teal, .green]))
-
-                            } else {
-                                // Pending state: both buttons share space equally
-                                Button("Decline") { Task { await viewModel.decline() } }
-                                    .buttonStyle(ModernActionButtonStyle(color: .pink, isSelected: false))
-
-                                Button("Accept") { Task { await viewModel.accept() } }
-                                    .buttonStyle(ModernActionButtonStyle(color: .teal, isSelected: false))
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 10)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: profile.status)
-                    }
-                    .offset(y: -15) // Pull content up into the gradient fade
-                }
+                content(for: profile)
             } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView().controlSize(.large)
+            }
+
+            if let error = viewModel.error {
+                VStack {
+                    Spacer()
+                    ErrorBannerView(error: error) { viewModel.error = nil }
+                        .padding(.bottom, 90)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .ignoresSafeArea(edges: .top)
-        .task {
-            await viewModel.loadProfile()
-        }
+        .animation(.spring(duration: 0.35), value: viewModel.error)
+        .animation(.spring(response: 0.4, dampingFraction: 0.72), value: viewModel.profile?.status)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await viewModel.start() }
     }
 
-    private func detailRow(icon: String, color: Color, text: String) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    // MARK: - Content
 
-            Text(text)
-                .font(.body)
-                .fontWeight(.medium)
-            Spacer()
+    private func content(for profile: Profile) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                hero(for: profile)
+                infoSheet(for: profile)
+            }
         }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .scrollIndicators(.hidden)
+        .ignoresSafeArea(edges: .top)
+        .safeAreaInset(edge: .bottom) { actionBar(for: profile) }
+    }
+
+    private func hero(for profile: Profile) -> some View {
+        GeometryReader { geo in
+            let minY = geo.frame(in: .global).minY
+            let stretch = max(minY, 0)
+
+            ZStack(alignment: .bottom) {
+                KFImage(profile.largePhotoURL)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: 420 + stretch)
+                    .blur(radius: 22)
+                    .overlay(.black.opacity(0.28))
+                    .offset(y: -stretch)
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.15), .black.opacity(0.75)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 260)
+
+                VStack(spacing: 14) {
+                    KFImage(profile.largePhotoURL)
+                        .resizable()
+                        .placeholder {
+                            Image(systemName: "person.fill").font(.system(size: 60))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                        .scaledToFill()
+                        .frame(width: 150, height: 190)
+                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .strokeBorder(.white.opacity(0.7), lineWidth: 4))
+                        .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+
+                    VStack(spacing: 4) {
+                        Text("\(profile.fullName), \(profile.age)")
+                            .font(.system(.title, design: .rounded).weight(.bold))
+                        Text("\(profile.city), \(profile.country)")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+
+                    if profile.status != .pending {
+                        StatusBadge(status: profile.status)
+                            .colorScheme(.light)
+                    }
+                }
+                .padding(.bottom, 34)
+            }
+        }
+        .frame(height: 420)
+    }
+
+    private func infoSheet(for profile: Profile) -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Capsule()
+                .fill(.secondary.opacity(0.4))
+                .frame(width: 40, height: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 10)
+
+            chips(for: profile)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Details")
+                    .font(.headline)
+                infoRow(icon: "envelope.fill", tint: Palette.plum, text: profile.email)
+                infoRow(icon: "phone.fill", tint: Palette.emerald, text: profile.phone)
+                if let registered = profile.registeredDate {
+                    infoRow(
+                        icon: "calendar",
+                        tint: Palette.amber,
+                        text: "Joined \(registered.formatted(date: .abbreviated, time: .omitted))"
+                    )
+                }
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous)
+                .fill(Color(.systemBackground))
+        )
+        .offset(y: -28)
+    }
+
+    private func chips(for profile: Profile) -> some View {
+        HStack(spacing: 10) {
+            chip(icon: "birthday.cake", text: "\(profile.age)")
+            chip(icon: "mappin.circle.fill", text: profile.state)
+            chip(text: "\(flag(profile.nationality)) \(nationalityName(profile.nationality))")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func chip(icon: String? = nil, text: String) -> some View {
+        HStack(spacing: 5) {
+            if let icon { Image(systemName: icon) }
+            Text(text).lineLimit(1)
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(Palette.plum)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Palette.plum.opacity(0.1), in: Capsule())
+    }
+
+    private func infoRow(icon: String, tint: Color, text: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.callout)
+                .foregroundStyle(tint)
+                .frame(width: 38, height: 38)
+                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            Text(text)
+                .font(.callout.weight(.medium))
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Action bar
+
+    private func actionBar(for profile: Profile) -> some View {
+        HStack(spacing: 14) {
+            decisionButton(
+                title: "Pass",
+                symbol: "xmark",
+                active: profile.status == .declined,
+                activeStyle: AnyShapeStyle(Palette.passGradient),
+                action: { Task { await viewModel.decline() } }
+            )
+            decisionButton(
+                title: "Like",
+                symbol: "heart.fill",
+                active: profile.status == .accepted,
+                activeStyle: AnyShapeStyle(Palette.likeGradient),
+                action: { Task { await viewModel.accept() } }
+            )
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 6)
+        .background(.ultraThinMaterial)
+    }
+
+    private func decisionButton(
+        title: String,
+        symbol: String,
+        active: Bool,
+        activeStyle: AnyShapeStyle,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            Haptics.impact(.medium)
+            action()
+        } label: {
+            Label(active ? "\(title)ed" : title, systemImage: symbol)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .foregroundStyle(active ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                .background {
+                    if active {
+                        Capsule().fill(activeStyle)
+                    } else {
+                        Capsule().fill(Color(.tertiarySystemFill))
+                    }
+                }
+        }
+        .buttonStyle(PressBounceStyle())
+        .accessibilityLabel(active ? "\(title)ed" : title)
+    }
+
+    // MARK: - Helpers
+
+    private func nationalityName(_ code: String) -> String {
+        Locale.current.localizedString(forRegionCode: code) ?? code
+    }
+
+    private func flag(_ code: String) -> String {
+        code.uppercased().unicodeScalars.reduce(into: "") { result, scalar in
+            if let flagScalar = UnicodeScalar(127_397 + scalar.value) {
+                result.unicodeScalars.append(flagScalar)
+            }
+        }
     }
 }
+
+#if DEBUG
+#Preview {
+    let env = AppEnvironment(repository: PreviewProfileRepository())
+    let profiles = Profile.previewList()
+    return NavigationStack {
+        MatchDetailView(viewModel: env.makeDetailViewModel(id: profiles[1].id))
+    }
+}
+#endif

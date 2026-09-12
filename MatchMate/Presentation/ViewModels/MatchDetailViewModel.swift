@@ -2,59 +2,46 @@
 //  MatchDetailViewModel.swift
 //  MatchMate
 //
-//  Created by Darshan Dodia on 26/08/26.
-//
 
 import Foundation
+import Observation
 
+@MainActor
 @Observable
 final class MatchDetailViewModel {
-    var profile: Profile?
-    var error: ProfileRepositoryError?
 
-    private let profileId: String
-    private let getProfile: GetProfileUseCase
-    private let updateStatus: UpdateMatchStatusUseCase
+    private(set) var profile: Profile?
+    var error: AppError?
 
-    init(profileId: String, getProfile: GetProfileUseCase, updateStatus: UpdateMatchStatusUseCase) {
-        self.profileId = profileId
-        self.getProfile = getProfile
-        self.updateStatus = updateStatus
+    private let id: String
+    private let repository: ProfileRepository
+    private var started = false
+
+    init(id: String, repository: ProfileRepository) {
+        self.id = id
+        self.repository = repository
     }
 
-    func loadProfile() async {
-        do {
-            self.profile = try await getProfile.execute(id: profileId)
-            self.error = nil
-        } catch {
-            self.error = .persistence(error)
+    /// Entry point for the view's `.task`. Consumes the shared profile stream for the lifetime of
+    /// the screen, so any status change — here or on the list — flows straight back in and the two
+    /// screens never disagree. Ends when the task is cancelled (the view goes away).
+    func start() async {
+        guard !started else { return }
+        started = true
+        for await list in repository.profiles() {
+            profile = list.first { $0.id == id }
         }
     }
 
-    func accept() async {
-        await update(status: .accepted)
-    }
+    func accept() async { await setStatus(.accepted) }
+    func decline() async { await setStatus(.declined) }
 
-    func decline() async {
-        await update(status: .declined)
-    }
-
-    private func update(status: MatchStatus) async {
-        guard var currentProfile = profile else { return }
-        let oldStatus = currentProfile.status
-
-        // Optimistic UI
-        currentProfile.status = status
-        self.profile = currentProfile
-
+    private func setStatus(_ status: MatchStatus) async {
         do {
-            try await updateStatus.execute(id: profileId, status: status)
-            self.error = nil
+            try await repository.updateStatus(id: id, to: status)
+            error = nil
         } catch {
-            // Rollback
-            currentProfile.status = oldStatus
-            self.profile = currentProfile
-            self.error = .persistence(error)
+            self.error = AppError(error)
         }
     }
 }

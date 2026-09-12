@@ -1,8 +1,6 @@
 //
 //  MatchDetailViewModelTests.swift
-//  MatchMate
-//
-//  Created by Darshan Dodia on 26/08/26.
+//  MatchMateTests
 //
 
 import XCTest
@@ -10,81 +8,70 @@ import XCTest
 
 @MainActor
 final class MatchDetailViewModelTests: XCTestCase {
-    var viewModel: MatchDetailViewModel!
-    var mockRepository: MockProfileRepository!
+
+    private var repository: MockProfileRepository!
+    private var viewModel: MatchDetailViewModel!
 
     override func setUp() {
         super.setUp()
-        // We reuse the exact same mockProfileRepository we built for the list tests
-        mockRepository = MockProfileRepository()
-
-        let getProfileUseCase = DefaultGetProfileUseCase(repository: mockRepository)
-        let updateUseCase = DefaultUpdateMatchStatusUseCase(repository: mockRepository)
-
-        viewModel = MatchDetailViewModel(
-            profileId: "1",
-            getProfile: getProfileUseCase,
-            updateStatus: updateUseCase
-        )
+        repository = MockProfileRepository()
+        viewModel = MatchDetailViewModel(id: "7", repository: repository)
     }
 
-    func testLoadProfile_Success_PopulatesProfile() async {
-        // Arrange
-        let mockProfile = Profile.stub(id: "1", firstName: "Alice", lastName: "Smith")
-        mockRepository.storage["1"] = mockProfile
+    private func start() {
+        startObserving { [viewModel] in await viewModel?.start() }
+    }
 
-        // Act
-        await viewModel.loadProfile()
+    func test_start_deliversProfileFromStream() async {
+        await repository.seed([Profile.stub(id: "7", firstName: "Alice")])
 
-        // Assert
-        XCTAssertNotNil(viewModel.profile)
-        XCTAssertEqual(viewModel.profile?.firstName, "Alice")
+        start()
+        await waitUntil("profile delivered") { self.viewModel.profile?.firstName == "Alice" }
+
         XCTAssertNil(viewModel.error)
     }
 
-    func testLoadProfile_Failure_SurfacesError() async {
-        // Arrange
-        mockRepository.shouldThrowError = .persistence(NSError(domain: "Test", code: 1))
+    func test_start_profileAbsent_leavesProfileNil() async {
+        await repository.seed([Profile.stub(id: "other")])
 
-        // Act
-        await viewModel.loadProfile()
+        start()
+        for _ in 0..<50 { await Task.yield() } // let the stream deliver
 
-        // Assert
         XCTAssertNil(viewModel.profile)
-        XCTAssertNotNil(viewModel.error)
     }
 
-    func testAccept_OptimisticallyUpdatesUI_AndPersistsToDatabase() async {
-        // Arrange
-        let mockProfile = Profile.stub(id: "1", firstName: "Alice", lastName: "Smith")
-        mockRepository.storage["1"] = mockProfile
-        await viewModel.loadProfile() // Load the profile into the ViewModel state
+    func test_accept_optimisticThenPersists() async {
+        await repository.seed([Profile.stub(id: "7", status: .pending)])
+        start()
+        await waitUntil { self.viewModel.profile != nil }
 
-        // Act
         await viewModel.accept()
+        await waitUntil("status accepted") { self.viewModel.profile?.status == .accepted }
 
-        // Assert - ViewModel state updated immediately (Optimistic UI)
-        XCTAssertEqual(viewModel.profile?.status, .accepted)
-        // Assert - Changes were sent to the database
-        XCTAssertEqual(mockRepository.storage["1"]?.status, .accepted)
-        XCTAssertNil(viewModel.error)
+        let updates = await repository.statusUpdates
+        XCTAssertEqual(updates.map(\.status), [.accepted])
     }
 
-    func testDecline_Failure_RollsBackStatusToPreviousState() async {
-        // Arrange
-        let mockProfile = Profile.stub(id: "1", firstName: "Alice", lastName: "Smith")
-        mockRepository.storage["1"] = mockProfile
-        await viewModel.loadProfile()
+    func test_decline_failure_rollsBackAndSurfacesError() async {
+        await repository.seed([Profile.stub(id: "7", status: .pending)])
+        await repository.setUpdateStatusError(.persistence)
+        start()
+        await waitUntil { self.viewModel.profile != nil }
 
-        // Force the database update to fail
-        mockRepository.shouldThrowError = .persistence(NSError(domain: "Test", code: 1))
-
-        // Act
         await viewModel.decline()
+        await waitUntil("rolled back to pending") { self.viewModel.profile?.status == .pending }
 
-        // Assert - UI State rolls back to pending instead of getting stuck on declined
-        XCTAssertEqual(viewModel.profile?.status, .pending)
-        // Assert - Error surfaced to be displayed in the ErrorBannerView
-        XCTAssertNotNil(viewModel.error)
+        XCTAssertEqual(viewModel.error, .persistence)
+    }
+
+    func test_statusChangedOnList_reflectsInDetailWithoutReload() async {
+        await repository.seed([Profile.stub(id: "7", status: .pending)])
+        start()
+        await waitUntil { self.viewModel.profile != nil }
+
+        // A different observer (the list) changes the status.
+        try? await repository.updateStatus(id: "7", to: .declined)
+
+        await waitUntil("detail self-corrects") { self.viewModel.profile?.status == .declined }
     }
 }
